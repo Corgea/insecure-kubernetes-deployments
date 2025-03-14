@@ -1,5 +1,6 @@
 package com.example.catapp.controllers;
 
+import org.apache.commons.text.StringEscapeUtils;
 import com.example.catapp.models.Comment;
 import com.example.catapp.repositories.CommentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +25,7 @@ public class CommentController {
     @PostMapping("/addComment")
     public String addComment(@RequestParam String commentText, Model model) {
         Comment comment = new Comment();
-        comment.setText(commentText); // No sanitization
+        comment.setText(StringEscapeUtils.escapeHtml4(commentText)); // Sanitize input
         commentRepository.save(comment);
         model.addAttribute("message", "Comment added");
         return "addCommentResult"; // Returns addCommentResult.html
