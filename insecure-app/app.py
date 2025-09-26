@@ -46,7 +46,7 @@ def index():
             sql = request.form['sql']
             try:
                 # Execute the user's SQL query
-                cursor.execute(sql)
+                cursor.execute(sql) #oh-o
                 # Fetch all rows from the query result
                 rows = cursor.fetchall()
                 # Format the results for display
