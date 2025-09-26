@@ -6,8 +6,8 @@ import requests
 from lxml import etree
 
 # Example hardcoded AWS credentials (sensitive data leakage)
-aws_access_key_id = 'AKIA2JAPX77RGLB664VE'
-aws_secret = 'v5xpjkWYoy45fGKFSMajSn+sqs22WI2niacX9yO5'
+aws_access_key_id = 'AKIA2JAPX77RGLB664VE' #oh o
+aws_secret = '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'  #oh o
 
 app = Flask(__name__)
 
@@ -20,7 +20,7 @@ def index():
     username = ''
     password = ''
     try:
-        cursor.execute("SELECT * FROM users WHERE username = '%s' AND password = '%s'" % (username, password))
+        cursor.execute("SELECT * FROM users WHERE username = '%s' AND password = '%s'" % (username, password)) 
     except:
         pass
 
@@ -43,10 +43,10 @@ def index():
 
         # 4 - SQL Injection via input
         elif 'sql' in request.form:
-            sql = request.form['sql']
+            sql = request.form['sql']  #oh o
             try:
                 # Execute the user's SQL query
-                cursor.execute(sql)
+                cursor.execute(sql)  #oh o
                 # Fetch all rows from the query result
                 rows = cursor.fetchall()
                 # Format the results for display
