@@ -140,7 +140,7 @@ def search_games(query: str):
 @app.get("/.env")
 def get_env():
     # Vulnerability: Sensitive files are exposed (API9:2019 - Improper Assets Management)
-    return {"SECRET_KEY": "supersecretkey"}
+    return {"SECRET_KEY": os.environ.get("SECRET_KEY", "")}
 
 # Additional vulnerable endpoint: Insufficient logging and monitoring
 @app.post("/admin/delete_game")
