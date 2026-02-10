@@ -15,7 +15,7 @@ from Crypto.Cipher import AES, PKCS1_OAEP
 import base64
 import threading # used for ransom note and decryption key on dekstop
 
-
+supersecret = "iafioewf2930i092i3ramfowe"
 
 class RansomWare:
 
