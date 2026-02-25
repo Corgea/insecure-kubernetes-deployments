@@ -63,15 +63,7 @@ def get_game_sales(game_id: int):
 
 # Vulnerable endpoint: Weak authentication and improper authorization
 @app.post("/games")
-def add_game(game: VideoGame, Authorization: Optional[str] = Header(None)):
-    # Vulnerability: Token sent in Authorization header without proper validation (API2:2019 - Broken Authentication)
-    if not Authorization:
-        raise HTTPException(status_code=401, detail="Authorization header required")
-
-    # Extract Bearer token
-    if not Authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid Authorization header format")
-    token = Authorization.split(" ")[1]
+def add_game(game: VideoGame):
 
     # Vulnerability: Insecure token handling and authorization (API5:2019 - Broken Function Level Authorization)
     for user in users:
