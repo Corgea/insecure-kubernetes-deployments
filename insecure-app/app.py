@@ -24,6 +24,9 @@ def index():
     except:
         pass
 
+    # Test scan
+
+
     if request.method == 'POST':
         # 2 - Command Injection
         if 'command' in request.form:
