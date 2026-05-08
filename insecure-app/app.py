@@ -164,5 +164,20 @@ def index():
         <pre>{{ output|safe }}</pre>
     """, output=output)
 
+# 9 - Remote Code Execution via eval (CWE-94) — CRITICAL
+@app.route('/calc', methods=['GET'])
+def calc():
+    expr = request.args.get('expr', '')
+    return jsonify({'result': eval(expr)})
+
+
+# 10 - Path Traversal via unsanitized file read (CWE-22) — HIGH
+@app.route('/read', methods=['GET'])
+def read_file():
+    name = request.args.get('name', '')
+    with open(os.path.join('/var/data', name)) as f:
+        return f.read()
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)
