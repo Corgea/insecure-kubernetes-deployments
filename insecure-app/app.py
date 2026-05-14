@@ -179,5 +179,14 @@ def read_file():
         return f.read()
 
 
+# 11 - SSRF via user-controlled URL fetch (CWE-918) — HIGH
+@app.route('/fetch', methods=['GET'])
+def fetch_url():
+    import urllib.request
+    url = request.args.get('url', '')
+    with urllib.request.urlopen(url) as resp:
+        return resp.read()
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)
