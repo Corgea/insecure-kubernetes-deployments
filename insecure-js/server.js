@@ -127,8 +127,8 @@ const server = http.createServer((req, res) => {
           responseMessages.push(`<h3>2. SQLite Injection</h3>`); // Add header immediately
           asyncTasks.push(
             new Promise((resolve) => {
-              const query = `SELECT product FROM Orders WHERE orderNumber = ${postData.orderNumber2};`;
-              db.all(query, [], (err, rows) => {
+              const query = 'SELECT product FROM Orders WHERE orderNumber = ?;';
+              db.all(query, [postData.orderNumber2], (err, rows) => {
                 if (err) {
                   responseMessages[index] += `<p>SQLite error: ${err.message}</p>`;
                 } else {
