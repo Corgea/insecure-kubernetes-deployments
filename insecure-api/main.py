@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi import FastAPI, HTTPException, Header
 from typing import Optional
 from models import VideoGame, User
 from database import video_games, users
@@ -135,12 +135,6 @@ def search_games(query: str):
             "sales": row[5],
         })
     return results
-
-# Additional vulnerable endpoint: Improper assets management
-@app.get("/.env")
-def get_env():
-    # Vulnerability: Sensitive files are exposed (API9:2019 - Improper Assets Management)
-    return {"SECRET_KEY": "supersecretkey"}
 
 # Additional vulnerable endpoint: Insufficient logging and monitoring
 @app.post("/admin/delete_game")
