@@ -86,9 +86,8 @@ def index():
         if 'username' in request.form:
             username = request.form['username']
             try:
-                # Vulnerable SQL query using string interpolation
-                query = "SELECT password FROM users WHERE username = '{}'".format(username)
-                cursor.execute(query)
+                query = "SELECT password FROM users WHERE username = ?"
+                cursor.execute(query, (username,))
                 result = cursor.fetchone()
                 if result:
                     output = f"Password for {username}: {result[0]}"
