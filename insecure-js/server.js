@@ -4,6 +4,7 @@ const qs = require('querystring');
 const semver = require('semver');
 const JSON5 = require('json5');
 const { sequelize, User, Password } = require('./init_db');
+const { touchSession, exceedsRequestLimit, purgeExpiredSessions } = require('./sessions');
 const sqlite3 = require("sqlite3").verbose();
 const db = new sqlite3.Database("./data.db");
 const mysql = require('mysql2');
@@ -29,6 +30,19 @@ connection.connect((err) => {
 const hostname = '0.0.0.0';
 const port = 3000;
 
+function readCookie(cookieHeader, name) {
+  if (!cookieHeader) {
+    return null;
+  }
+  for (const pair of cookieHeader.split(';')) {
+    const separator = pair.indexOf('=');
+    if (separator !== -1 && pair.slice(0, separator).trim() === name) {
+      return pair.slice(separator + 1).trim();
+    }
+  }
+  return null;
+}
+
 const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/styles.css') {
     fs.readFile(path.join(__dirname, 'styles.css'), (err, data) => {
@@ -47,6 +61,23 @@ const server = http.createServer((req, res) => {
     });
 
     req.on('end', async () => {
+      const sessionToken = readCookie(req.headers.cookie, 'sessionToken');
+      if (sessionToken) {
+        try {
+          const session = await touchSession(sessionToken);
+          if (session && exceedsRequestLimit(session)) {
+            res.writeHead(429, { 'Content-Type': 'text/plain' });
+            res.end('Too many requests for this session.');
+            return;
+          }
+        } catch (error) {
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end('An unexpected error occurred.');
+          console.error(error);
+          return;
+        }
+      }
+
       const postData = qs.parse(body);
       let responseMessages = [];
 
@@ -319,6 +350,15 @@ const server = http.createServer((req, res) => {
     `);
   }
 });
+
+setInterval(async () => {
+  try {
+    const purged = await purgeExpiredSessions();
+    console.log(`Purged ${purged} expired sessions`);
+  } catch (error) {
+    console.error('Failed to purge expired sessions:', error);
+  }
+}, 60 * 1000);
 
 server.listen(port, hostname, async () => {
   await sequelize.sync();
