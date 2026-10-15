@@ -5,6 +5,7 @@ from database import video_games, users
 import cache
 import catalogue
 import export
+import reports
 import sqlite3
 import os
 import requests
@@ -128,6 +129,34 @@ def get_sales_report(
     except ValueError as exc:
         raise HTTPException(400, detail="game_ids must be a comma-separated list of integers") from exc
     return {"sales": catalogue.report_sales(video_games, ids)}
+
+# Dashboard table: the catalogue ranked by units sold, e.g. /reports/games?page=2&per_page=25
+@app.get("/reports/games")
+def get_games_report(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(reports.DEFAULT_PAGE_SIZE, ge=1, le=reports.MAX_PAGE_SIZE),
+    Authorization: Optional[str] = Header(None),
+) -> Dict[str, Any]:
+    _current_user(Authorization)
+    ranked = reports.rank_by_sales(video_games)
+    return reports.paginate(ranked, page, per_page).as_dict()
+
+@app.get("/reports/publishers")
+def get_publisher_report(Authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    _current_user(Authorization)
+    return {"publishers": reports.publisher_share(video_games)}
+
+# Units per release year, optionally for one publisher, e.g. /reports/trend?publisher=Capcom
+@app.get("/reports/trend")
+def get_sales_trend(
+    publisher: Optional[str] = Query(None, min_length=1, max_length=100),
+    Authorization: Optional[str] = Header(None),
+) -> Dict[str, Any]:
+    _current_user(Authorization)
+    games = catalogue.games_by_publisher(video_games, publisher) if publisher else video_games
+    if not games:
+        raise HTTPException(status_code=404, detail="No games for that publisher")
+    return {"publisher": publisher, "years": reports.yearly_trend(games)}
 
 @app.get("/games/{game_id}")
 def get_game(game_id: int) -> Dict[str, Any]:
