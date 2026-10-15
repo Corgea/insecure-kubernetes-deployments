@@ -33,3 +33,15 @@ variable "db_multi_az" {
   type        = bool
   default     = true
 }
+
+variable "log_retention_days" {
+  description = "Days to keep S3 server access logs before they expire"
+  type        = number
+  default     = 365
+
+  validation {
+    # Logs move to STANDARD_IA after 30 days, and expiration must come after that.
+    condition     = var.log_retention_days > 30
+    error_message = "log_retention_days must be greater than 30."
+  }
+}
