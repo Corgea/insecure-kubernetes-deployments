@@ -3,22 +3,16 @@ package com.example.catapp.controllers;
 import com.example.catapp.models.Album;
 import com.example.catapp.models.ShareLink;
 import com.example.catapp.services.AccessStats.AccessType;
-import com.example.catapp.services.AlbumNotFoundException;
 import com.example.catapp.services.AlbumService;
-import com.example.catapp.services.AlbumValidationException;
 import com.example.catapp.services.ShareLinkService;
-import com.example.catapp.services.ShareLinkUnavailableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.SessionAttribute;
 
 import java.time.Duration;
@@ -79,26 +73,5 @@ public class ShareLinkController {
         albumService.recordAccess(album, AccessType.VIEW, userId);
         model.addAttribute("pictures", albumService.pictures(album));
         return "searchResults";
-    }
-
-    @ExceptionHandler(ShareLinkUnavailableException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    @ResponseBody
-    public String shareLinkUnavailable(ShareLinkUnavailableException e) {
-        return e.getMessage();
-    }
-
-    @ExceptionHandler(AlbumNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    @ResponseBody
-    public String albumNotFound(AlbumNotFoundException e) {
-        return e.getMessage();
-    }
-
-    @ExceptionHandler(AlbumValidationException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ResponseBody
-    public String invalidShareRequest(AlbumValidationException e) {
-        return e.getMessage();
     }
 }

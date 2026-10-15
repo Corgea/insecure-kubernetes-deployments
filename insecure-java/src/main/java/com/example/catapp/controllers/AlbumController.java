@@ -5,9 +5,7 @@ import com.example.catapp.models.Album.Visibility;
 import com.example.catapp.models.CatPicture;
 import com.example.catapp.services.AccessStats;
 import com.example.catapp.services.AccessStats.AccessType;
-import com.example.catapp.services.AlbumNotFoundException;
 import com.example.catapp.services.AlbumService;
-import com.example.catapp.services.AlbumValidationException;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -15,13 +13,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.SessionAttribute;
 
 import java.nio.charset.StandardCharsets;
@@ -164,8 +160,14 @@ public class AlbumController {
         if (userId == null) {
             return "redirect:/login";
         }
-        albumService.delete(id, userId);
-        return "redirect:/albums";
+        try {
+            albumService.delete(id, userId);
+            return "redirect:/albums";
+        } catch (Exception e) {
+            // A double-submitted delete ends up here once the first one went through; the album
+            // list is the right place to land either way.
+            return "redirect:/albums";
+        }
     }
 
     @PostMapping("/albums/merge")
@@ -175,20 +177,6 @@ public class AlbumController {
         }
         albumService.mergeAlbums(userId);
         return "redirect:/albums";
-    }
-
-    @ExceptionHandler(AlbumNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    @ResponseBody
-    public String albumNotFound(AlbumNotFoundException e) {
-        return e.getMessage();
-    }
-
-    @ExceptionHandler(AlbumValidationException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ResponseBody
-    public String invalidAlbumRequest(AlbumValidationException e) {
-        return e.getMessage();
     }
 
     private List<AlbumSummary> summarize(List<Album> albums) {
