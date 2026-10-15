@@ -45,3 +45,21 @@ variable "log_retention_days" {
     error_message = "log_retention_days must be greater than 30."
   }
 }
+
+variable "enable_backups" {
+  description = "Back up the database and the app bucket with AWS Backup"
+  type        = bool
+  default     = true
+}
+
+variable "backup_retention_days" {
+  description = "Days to keep daily AWS Backup recovery points"
+  type        = number
+  default     = 35
+
+  validation {
+    # Must stay inside the vault lock's 7 to 400 day retention range.
+    condition     = var.backup_retention_days >= 7 && var.backup_retention_days <= 400
+    error_message = "backup_retention_days must be between 7 and 400."
+  }
+}
