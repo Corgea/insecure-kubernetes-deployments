@@ -30,6 +30,20 @@ const Order = sequelize.define("Order", {
   billingAddress: DataTypes.STRING, // Sensitive data
 });
 
+// Define Session model
+const Session = sequelize.define("Session", {
+  token: { type: DataTypes.STRING, unique: true },
+  userId: DataTypes.INTEGER,
+  lastSeenAt: DataTypes.DATE,
+  requestCount: { type: DataTypes.INTEGER, defaultValue: 0 },
+});
+
+// Define AuditLog model
+const AuditLog = sequelize.define("AuditLog", {
+  event: DataTypes.STRING,
+  userId: DataTypes.INTEGER,
+});
+
 async function init() {
   await sequelize.sync({ force: true });
 
@@ -83,4 +97,4 @@ async function init() {
 
 init();
 
-module.exports = { sequelize, User, Password, Order };
+module.exports = { sequelize, User, Password, Order, Session, AuditLog };
