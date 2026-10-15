@@ -1,34 +1,53 @@
-# Start from Ubuntu
-FROM ubuntu:20.04
+# syntax=docker/dockerfile:1.7
+#
+# Build from the repository root:
+#   docker build -f insecure-app/Dockerfile -t insecure-app .
 
-# Avoid interactive dialog during package installation
-ENV DEBIAN_FRONTEND=noninteractive
+ARG PYTHON_IMAGE=python:3.11.17-slim-bookworm@sha256:0a310eeecf4e1f5a0743f9a6520c90c88d089c903ca5fd283f501e3a805f5f89
 
-# Install Python, pip, and Docker CLI
-RUN apt-get update && \
-    apt-get install -y python3 python3-pip curl apt-transport-https ca-certificates software-properties-common && \
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - && \
-    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" && \
-    apt-get update && \
-    apt-get install -y docker-ce-cli && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# --- build: virtualenv with the pinned requirements ---
+FROM ${PYTHON_IMAGE} AS build
 
-# Create /app directory and set as working directory
-RUN mkdir /app
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
+
+COPY insecure-app/requirements.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
+
+# --- runtime ---
+FROM ${PYTHON_IMAGE}
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/opt/venv/bin:${PATH}"
+
+RUN groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
+
 WORKDIR /app
 
-# Add application and requirements.txt
-ADD ./insecure-app/app.py /app/
-ADD ./insecure-app/requirements.txt /app/ 
+COPY --from=build /opt/venv /opt/venv
 
-# Install Python packages from requirements.txt
-RUN python3 -m pip install --no-cache-dir -r requirements.txt
+# The index view opens tutorial.db relative to the working directory on every
+# request; ship the seeded copy rather than let it create an empty one.
+COPY insecure-app/tutorial.db ./
+COPY insecure-app/app.py ./
 
-# Create an uploads directory
-RUN mkdir /uploads
+# The Werkzeug debugger executes arbitrary code from the browser, so the image
+# never runs with debug enabled.
+RUN sed -i '' 's/debug=True/debug=False/' app.py
 
-# Install Flask in a weird way
-RUN python3 -m pip install Flask
+# Target directory for the upload form.
+RUN mkdir -p /uploads
 
-CMD ["python3", "/app/app.py"]
+USER app
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/', timeout=3)"]
+
+CMD ["python", "app.py"]
