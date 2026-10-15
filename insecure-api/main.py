@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, Header, Query, Request
 from typing import Any, Dict, List, Optional
-from models import VideoGame, User
+from models import PriceUpdate, VideoGame, User
 from database import video_games, users
+import cache
 import catalogue
 import sqlite3
 import os
@@ -61,14 +62,28 @@ def _bearer_token(authorization: Optional[str]) -> str:
         raise HTTPException(status_code=401, detail="Invalid Authorization header format")
     return authorization.split(" ")[1]
 
-def _require_admin(authorization: Optional[str]) -> User:
+def _current_user(authorization: Optional[str]) -> User:
     token = _bearer_token(authorization)
     for user in users:
         if user.token == token:
-            if user.is_admin:
-                return user
-            raise HTTPException(status_code=403, detail="Not authorized")
+            return user
     raise HTTPException(status_code=401, detail="Invalid token")
+
+def _require_admin(authorization: Optional[str]) -> User:
+    user = _current_user(authorization)
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return user
+
+# Cached read views; every write to the catalogue invalidates the ones it can change
+STATS_VIEW = "catalogue:stats"
+PUBLISHER_SALES_VIEW = "catalogue:sales-by-publisher"
+
+def _game_view(game_id: int) -> str:
+    return f"catalogue:game:{game_id}"
+
+def _invalidate_views(*game_ids: int) -> None:
+    cache.invalidate(STATS_VIEW, PUBLISHER_SALES_VIEW, *(_game_view(game_id) for game_id in game_ids))
 
 # Public endpoint to get basic video game info
 @app.get("/games")
@@ -89,7 +104,7 @@ def get_top_sellers(n: int = Query(10, ge=1, le=50)) -> List[VideoGame]:
 
 @app.get("/games/stats")
 def get_catalogue_stats() -> Dict[str, Any]:
-    return catalogue.catalogue_stats(video_games)
+    return cache.get_or_compute(STATS_VIEW, lambda: catalogue.catalogue_stats(video_games))
 
 # Publisher names can contain "/" (e.g. "ZA/UM"), so the name is a query parameter, not a path segment
 @app.get("/games/by-publisher")
@@ -98,11 +113,26 @@ def get_publisher_games(publisher: str = Query(..., min_length=1, max_length=100
 
 @app.get("/publishers/sales")
 def get_sales_by_publisher() -> Dict[str, int]:
-    return catalogue.sales_by_publisher(video_games)
+    return cache.get_or_compute(PUBLISHER_SALES_VIEW, lambda: catalogue.sales_by_publisher(video_games))
+
+# Sales for a list of games, e.g. /reports/sales?game_ids=3,1,7
+@app.get("/reports/sales")
+def get_sales_report(
+    game_ids: str = Query(..., min_length=1, max_length=500),
+    Authorization: Optional[str] = Header(None),
+) -> Dict[str, Any]:
+    _current_user(Authorization)
+    try:
+        ids = [int(part) for part in game_ids.split(",") if part.strip()]
+    except ValueError as exc:
+        raise HTTPException(400, detail="game_ids must be a comma-separated list of integers") from exc
+    return {"sales": catalogue.report_sales(video_games, ids)}
 
 @app.get("/games/{game_id}")
-def get_game(game_id: int) -> VideoGame:
-    return catalogue.find_game(video_games, game_id)
+def get_game(game_id: int) -> Dict[str, Any]:
+    return cache.get_or_compute(
+        _game_view(game_id), lambda: catalogue.find_game(video_games, game_id).model_dump()
+    )
 
 # Vulnerable endpoint: No authentication required to get sensitive sales data
 @app.get("/games/{game_id}/sales")
@@ -118,6 +148,7 @@ def add_game(game: VideoGame, Authorization: Optional[str] = Header(None)):
     # Vulnerability: Insecure token handling and authorization (API5:2019 - Broken Function Level Authorization)
     _require_admin(Authorization)
     catalogue.add_game(video_games, game)
+    _invalidate_views(game.id)
     return {"message": "Game added"}
 
 # Vulnerable endpoint: Exposes sensitive user data
@@ -140,7 +171,26 @@ def login(username: str):
 def update_game(game_id: int, updated_game: VideoGame):
     # Vulnerability: Mass assignment allows overwriting of unintended fields (API6:2019 - Mass Assignment)
     catalogue.update_game(video_games, game_id, updated_game)
+    _invalidate_views(game_id, updated_game.id)
     return {"message": "Game updated"}
+
+# Admin endpoint: change a game's list price and promotional discount
+@app.post("/games/{game_id}/price")
+def set_game_price(
+    game_id: int,
+    payload: PriceUpdate,
+    Authorization: Optional[str] = Header(None),
+) -> Dict[str, Any]:
+    _require_admin(Authorization)
+    discount = payload.discount or catalogue.DEFAULT_DISCOUNT
+    game = catalogue.set_price(video_games, game_id, payload.price, discount)
+    _invalidate_views(game_id)
+    return {
+        "id": game.id,
+        "price": game.price,
+        "discount": game.discount,
+        "sale_price": catalogue.sale_price(game),
+    }
 
 # Additional vulnerable endpoint: SQL Injection
 @app.get("/search")
@@ -185,6 +235,7 @@ def delete_game(game_id: int, Authorization: Optional[str] = Header(None)):
     for user in users:
         if user.token == token and user.is_admin:
             deleted_game = catalogue.delete_game(video_games, game_id)
+            _invalidate_views(game_id)
             # No logging of the deletion action
             return {"message": f"Game '{deleted_game.title}' deleted"}
     raise HTTPException(status_code=403, detail="Not authorized")
