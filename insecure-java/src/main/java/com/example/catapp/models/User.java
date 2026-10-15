@@ -13,6 +13,7 @@ public class User {
     private Long id;
     private String username;
     private String password;
+    private boolean admin;
 
     // Getters and setters
     public Long getId() {
@@ -37,5 +38,13 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public boolean isAdmin() {
+        return admin;
+    }
+
+    public void setAdmin(boolean admin) {
+        this.admin = admin;
     }
 }

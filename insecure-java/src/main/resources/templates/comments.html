@@ -8,7 +8,7 @@
     <!-- Vulnerability: CSRF - No protection against unauthorized requests -->
     <p><strong>Note:</strong> Deleting comments does not require any CSRF token, making it vulnerable to CSRF attacks.</p>
     <ul>
-        <li th:each="comment : ${comments}">
+        <li th:each="comment : ${comments}" th:unless="${comment.hidden}">
             <span th:utext="${comment.text}"></span>
             <form action="#" th:action="@{/deleteComment}" method="post" style="display:inline;">
                 <input type="hidden" name="commentId" th:value="${comment.id}" />
