@@ -12,4 +12,6 @@ public interface CatPictureRepository extends JpaRepository<CatPicture, Integer>
     // Vulnerable method using a raw query with user input
     @Query(value = "?1", nativeQuery = true)
     List<CatPicture> findByNameQuery(String query);
+
+    List<CatPicture> findByOwnerId(int ownerId);
 }
