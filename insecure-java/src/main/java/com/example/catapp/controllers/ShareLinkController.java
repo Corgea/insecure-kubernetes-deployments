@@ -2,6 +2,7 @@ package com.example.catapp.controllers;
 
 import com.example.catapp.models.Album;
 import com.example.catapp.models.ShareLink;
+import com.example.catapp.services.AccessStats.AccessType;
 import com.example.catapp.services.AlbumNotFoundException;
 import com.example.catapp.services.AlbumService;
 import com.example.catapp.services.AlbumValidationException;
@@ -71,8 +72,11 @@ public class ShareLinkController {
     }
 
     @GetMapping("/shared/{token}")
-    public String open(@PathVariable String token, Model model) {
+    public String open(@PathVariable String token,
+                       @SessionAttribute(name = SessionKeys.USER_ID, required = false) Integer userId,
+                       Model model) {
         Album album = shareLinkService.redeem(token);
+        albumService.recordAccess(album, AccessType.VIEW, userId);
         model.addAttribute("pictures", albumService.pictures(album));
         return "searchResults";
     }

@@ -6,6 +6,7 @@ import com.example.catapp.models.CatPicture;
 import com.example.catapp.repositories.AlbumRepository;
 import com.example.catapp.repositories.CatPictureRepository;
 import com.example.catapp.repositories.ShareLinkRepository;
+import com.example.catapp.services.AccessStats.AccessType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,13 +29,16 @@ public class AlbumService {
     private final AlbumRepository albumRepository;
     private final CatPictureRepository catPictureRepository;
     private final ShareLinkRepository shareLinkRepository;
+    private final AccessStats accessStats;
 
     public AlbumService(AlbumRepository albumRepository,
                         CatPictureRepository catPictureRepository,
-                        ShareLinkRepository shareLinkRepository) {
+                        ShareLinkRepository shareLinkRepository,
+                        AccessStats accessStats) {
         this.albumRepository = albumRepository;
         this.catPictureRepository = catPictureRepository;
         this.shareLinkRepository = shareLinkRepository;
+        this.accessStats = accessStats;
     }
 
     public List<Album> albumsOwnedBy(int userId) {
@@ -61,6 +65,31 @@ public class AlbumService {
         return albumRepository.findById(albumId)
                 .filter(album -> canView(album, userId))
                 .orElseThrow(() -> new AlbumNotFoundException(albumId));
+    }
+
+    /**
+     * Loads an album the user may look at and records the access in the owner's stats.
+     */
+    public Album openAlbum(int albumId, Integer userId, AccessType type) {
+        Album album = getVisibleAlbum(albumId, userId);
+        recordAccess(album, type, userId);
+        return album;
+    }
+
+    /**
+     * Records an access to an album that was opened without {@link #openAlbum}, such as through a
+     * share link.
+     */
+    public void recordAccess(Album album, AccessType type, Integer userId) {
+        accessStats.recordAccess(album.getId(), type, userId);
+    }
+
+    /**
+     * View and download counts of one of the user's albums.
+     */
+    public AccessStats.Snapshot statsFor(int albumId, int userId) {
+        Album album = getOwnedAlbum(albumId, userId);
+        return accessStats.snapshot(album.getId());
     }
 
     /**
@@ -161,6 +190,7 @@ public class AlbumService {
         Album album = getOwnedAlbum(albumId, userId);
         shareLinkRepository.deleteByAlbumId(album.getId());
         albumRepository.delete(album);
+        accessStats.forget(album.getId());
     }
 
     /**
