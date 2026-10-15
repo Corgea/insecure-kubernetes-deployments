@@ -1,0 +1,162 @@
+package com.example.catapp.controllers;
+
+import com.example.catapp.models.Album;
+import com.example.catapp.models.Album.Visibility;
+import com.example.catapp.services.AlbumNotFoundException;
+import com.example.catapp.services.AlbumService;
+import com.example.catapp.services.AlbumValidationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.SessionAttribute;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Controller
+public class AlbumController {
+
+    private final AlbumService albumService;
+
+    public AlbumController(AlbumService albumService) {
+        this.albumService = albumService;
+    }
+
+    @GetMapping("/albums")
+    public ResponseEntity<List<AlbumSummary>> myAlbums(
+            @SessionAttribute(name = SessionKeys.USER_ID, required = false) Integer userId) {
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(summarize(albumService.albumsOwnedBy(userId)));
+    }
+
+    @GetMapping("/albums/public")
+    @ResponseBody
+    public List<AlbumSummary> publicAlbums() {
+        return summarize(albumService.publicAlbums());
+    }
+
+    @PostMapping("/albums")
+    public String create(@RequestParam String name,
+                         @RequestParam(defaultValue = "PRIVATE") Visibility visibility,
+                         @SessionAttribute(name = SessionKeys.USER_ID, required = false) Integer userId) {
+        if (userId == null) {
+            return "redirect:/login";
+        }
+        Album album = albumService.create(userId, name, visibility);
+        return "redirect:/albums/" + album.getId();
+    }
+
+    @GetMapping("/albums/{id}")
+    public String view(@PathVariable int id,
+                       @SessionAttribute(name = SessionKeys.USER_ID, required = false) Integer userId,
+                       Model model) {
+        Album album = albumService.getVisibleAlbum(id, userId);
+        // The album page reuses the picture grid from the search results page.
+        model.addAttribute("pictures", albumService.pictures(album));
+        return "searchResults";
+    }
+
+    @GetMapping("/albums/{id}/summary")
+    @ResponseBody
+    public AlbumSummary summary(@PathVariable int id,
+                                @SessionAttribute(name = SessionKeys.USER_ID, required = false) Integer userId) {
+        Album album = albumService.getVisibleAlbum(id, userId);
+        int pictureCount = albumService.countPictures(album);
+        return new AlbumSummary(album, pictureCount);
+    }
+
+    @PostMapping("/albums/{id}/rename")
+    public String rename(@PathVariable int id,
+                         @RequestParam String name,
+                         @SessionAttribute(name = SessionKeys.USER_ID, required = false) Integer userId) {
+        if (userId == null) {
+            return "redirect:/login";
+        }
+        albumService.rename(id, userId, name);
+        return "redirect:/albums/" + id;
+    }
+
+    @PostMapping("/albums/{id}/visibility")
+    public String changeVisibility(@PathVariable int id,
+                                   @RequestParam Visibility visibility,
+                                   @SessionAttribute(name = SessionKeys.USER_ID, required = false) Integer userId) {
+        if (userId == null) {
+            return "redirect:/login";
+        }
+        albumService.changeVisibility(id, userId, visibility);
+        return "redirect:/albums/" + id;
+    }
+
+    @PostMapping("/albums/{id}/pictures")
+    public String addPicture(@PathVariable int id,
+                             @RequestParam int pictureId,
+                             @SessionAttribute(name = SessionKeys.USER_ID, required = false) Integer userId) {
+        if (userId == null) {
+            return "redirect:/login";
+        }
+        albumService.addPicture(id, userId, pictureId);
+        return "redirect:/albums/" + id;
+    }
+
+    @PostMapping("/albums/{id}/pictures/{pictureId}/remove")
+    public String removePicture(@PathVariable int id,
+                                @PathVariable int pictureId,
+                                @SessionAttribute(name = SessionKeys.USER_ID, required = false) Integer userId) {
+        if (userId == null) {
+            return "redirect:/login";
+        }
+        albumService.removePicture(id, userId, pictureId);
+        return "redirect:/albums/" + id;
+    }
+
+    @PostMapping("/albums/{id}/delete")
+    public String delete(@PathVariable int id,
+                         @SessionAttribute(name = SessionKeys.USER_ID, required = false) Integer userId) {
+        if (userId == null) {
+            return "redirect:/login";
+        }
+        albumService.delete(id, userId);
+        return "redirect:/albums";
+    }
+
+    @PostMapping("/albums/merge")
+    public String merge(@SessionAttribute(name = SessionKeys.USER_ID, required = false) Integer userId) {
+        if (userId == null) {
+            return "redirect:/login";
+        }
+        albumService.mergeAlbums(userId);
+        return "redirect:/albums";
+    }
+
+    @ExceptionHandler(AlbumNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ResponseBody
+    public String albumNotFound(AlbumNotFoundException e) {
+        return e.getMessage();
+    }
+
+    @ExceptionHandler(AlbumValidationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public String invalidAlbumRequest(AlbumValidationException e) {
+        return e.getMessage();
+    }
+
+    private List<AlbumSummary> summarize(List<Album> albums) {
+        Map<Integer, Integer> counts = albumService.pictureCounts(albums);
+        return albums.stream()
+                .map(album -> new AlbumSummary(album, counts.getOrDefault(album.getId(), 0)))
+                .collect(Collectors.toList());
+    }
+}
