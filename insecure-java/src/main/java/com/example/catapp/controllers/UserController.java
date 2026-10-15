@@ -7,7 +7,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-    
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+
 @Controller
 public class UserController {
 
@@ -35,14 +38,28 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public String login(@RequestParam String username, @RequestParam String password, Model model) {
+    public String login(@RequestParam String username, @RequestParam String password,
+                        HttpServletRequest request, Model model) {
         User user = userRepository.findByUsernameAndPassword(username, password);
         if (user != null) {
+            // Rotate the session id on login so a session id handed out before login cannot be reused.
+            HttpSession session = request.getSession();
+            request.changeSessionId();
+            session.setAttribute(SessionKeys.USER_ID, Math.toIntExact(user.getId()));
             model.addAttribute("message", "Login successful");
         } else {
             model.addAttribute("message", "Invalid credentials");
         }
         return "loginResult"; // Returns loginResult.html
+    }
+
+    @PostMapping("/logout")
+    public String logout(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        return "redirect:/";
     }
 
         // Vulnerable IDOR Endpoint: View Profile
