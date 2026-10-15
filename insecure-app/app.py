@@ -3,7 +3,10 @@ import subprocess
 import os
 import sqlite3
 import requests
+from datetime import datetime, timezone
 from lxml import etree
+
+from signup_guard import allow_signup, domain_allowed, is_blocked
 
 # Example hardcoded AWS credentials (sensitive data leakage)
 aws_access_key_id = 'AKIA2JAPX77RGLB664VE'
@@ -163,6 +166,33 @@ def index():
         <hr>
         <pre>{{ output|safe }}</pre>
     """, output=output)
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    email = request.form.get('email', '').strip()
+    if not email:
+        return jsonify(error="email is required"), 400
+
+    ip = request.remote_addr
+    if not allow_signup(ip):
+        return jsonify(error="too many signup attempts, try again later"), 429
+    if not domain_allowed(email):
+        return jsonify(error="email domain is not allowed"), 400
+    if is_blocked(email):
+        return jsonify(error="this email address cannot be used to sign up"), 403
+
+    db = sqlite3.connect("tutorial.db")
+    try:
+        db.execute("CREATE TABLE IF NOT EXISTS signups (email TEXT, created_at TEXT)")
+        db.execute(
+            "INSERT INTO signups (email, created_at) VALUES (?, ?)",
+            (email, datetime.now(timezone.utc).isoformat()),
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    return jsonify(email=email), 201
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)
