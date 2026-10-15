@@ -4,10 +4,11 @@ from models import PriceUpdate, VideoGame, User
 from database import video_games, users
 import cache
 import catalogue
+import export
 import sqlite3
 import os
 import requests
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 app = FastAPI(
     title="Intentionally Insecure Video Game API",
@@ -191,6 +192,42 @@ def set_game_price(
         "discount": game.discount,
         "sale_price": catalogue.sale_price(game),
     }
+
+# CSV export of the catalogue, e.g. POST /exports?columns=title,sales&publisher=Nintendo
+@app.post("/exports")
+def create_export(
+    columns: Optional[str] = Query(None, max_length=200),
+    publisher: Optional[str] = Query(None, max_length=100),
+    Authorization: Optional[str] = Header(None),
+) -> Dict[str, Any]:
+    _current_user(Authorization)
+    if publisher:
+        games = catalogue.games_by_publisher(video_games, publisher)
+    else:
+        games = catalogue.list_games(video_games)
+    try:
+        handle = export.create_export(games, columns)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "token": handle.token,
+        "rows": handle.rows,
+        "expires_at": handle.expires_at,
+        "download_url": f"/exports/{handle.token}",
+    }
+
+# The token in the link is the credential, so this works without an Authorization header
+@app.get("/exports/{token}")
+def download_export(token: str) -> Response:
+    try:
+        content = export.read_export(token)
+    except export.ExportNotFound:
+        raise HTTPException(status_code=404, detail="Export not found") from None
+    return Response(
+        content=content,
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="games.csv"'},
+    )
 
 # Additional vulnerable endpoint: SQL Injection
 @app.get("/search")
