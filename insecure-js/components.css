@@ -1,0 +1,194 @@
+/*
+ * Layered and repeated UI components: card grid, modal dialog and toasts.
+ * Colours, spacing and shape come from the tokens in theme.css.
+ */
+
+:root {
+  /* Stacking order for layered components, lowest first. */
+  --z-backdrop: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+
+  --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --modal-width: 560px;
+  --toast-width: 360px;
+}
+
+/* Cards */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+  gap: var(--space-4);
+  margin: var(--space-4) 0;
+}
+
+/* The flexible body row keeps the actions of cards in the same grid row
+   aligned along the bottom edge, whatever the length of each body. */
+.card {
+  display: grid;
+  grid-template-areas:
+    "media"
+    "header"
+    "body"
+    "footer";
+  grid-template-rows: auto auto 1fr auto;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.card-media {
+  grid-area: media;
+}
+
+.card-media img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.card-header {
+  grid-area: header;
+  padding: var(--space-4) var(--space-4) 0;
+}
+
+.card-body {
+  grid-area: body;
+  padding: var(--space-3) var(--space-4);
+}
+
+.card-actions {
+  grid-area: actions;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+/*
+ * Modal
+ *
+ * The backdrop and the dialog are siblings, so the dialog is not faded
+ * together with the backdrop:
+ *   <div class="modal-backdrop"></div>
+ *   <div class="modal" role="dialog" aria-modal="true">...</div>
+ */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: var(--z-backdrop);
+  display: flex;
+  flex-direction: column;
+  width: min(var(--modal-width), calc(100% - 2 * var(--space-4)));
+  max-height: calc(100vh - 2 * var(--space-6));
+  transform: translate(-50%, -50%);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-overlay);
+}
+
+/* display: flex above would otherwise override the UA rule for [hidden]. */
+.modal[hidden],
+.modal-backdrop[hidden] {
+  display: none;
+}
+
+.modal-header,
+.modal-footer {
+  flex: none;
+  padding: var(--space-4);
+}
+
+.modal-header {
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+/* Toasts */
+
+.toast-region {
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+
+/* Phones: full-width toasts along the bottom edge. */
+@media (max-width: 600px) {
+  .toast-region {
+    position: fixed;
+    right: var(--space-3);
+    bottom: var(--space-3);
+    left: var(--space-3);
+  }
+}
+
+/* Wider screens: a fixed-width column in the top-right corner. */
+@media (min-width: 601px) {
+  .toast-region {
+    position: fixed;
+    top: var(--space-4);
+    right: var(--space-4);
+    width: var(--toast-width);
+  }
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-left: 4px solid var(--color-info);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-overlay);
+  pointer-events: auto;
+}
+
+.toast-message {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.toast-success {
+  border-left-color: var(--color-success);
+}
+
+.toast-warning {
+  border-left-color: var(--color-warning);
+}
+
+.toast-error {
+  border-left-color: var(--color-danger);
+}
