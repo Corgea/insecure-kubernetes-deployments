@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Header, Request
 from typing import Optional
 from models import VideoGame, User
 from database import video_games, users
-from ratings import add_rating, ratings_for
+from ratings import add_rating, ratings_for, rating_summary
 import sqlite3
 import os
 import requests
@@ -81,6 +81,12 @@ def get_game_ratings(game_id: int):
     if not _game_exists(game_id):
         raise HTTPException(status_code=404, detail="Game not found")
     return {"game_id": game_id, "ratings": ratings_for(game_id)}
+
+@app.get("/games/{game_id}/ratings/summary")
+def get_game_rating_summary(game_id: int):
+    if not _game_exists(game_id):
+        raise HTTPException(status_code=404, detail="Game not found")
+    return rating_summary(game_id)
 
 # Vulnerable endpoint: Weak authentication and improper authorization
 @app.post("/games")
