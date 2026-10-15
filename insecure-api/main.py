@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi import FastAPI, HTTPException, Header, Query, Request
 from typing import Optional
 from models import VideoGame, User
 from database import video_games, users
@@ -47,10 +47,39 @@ def init_db():
 def startup_event():
     init_db()
 
-# Public endpoint to get basic video game info
+# Public endpoint to get basic video game info, one page at a time
 @app.get("/games")
-def get_games():
-    return video_games
+def get_games(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    publisher: Optional[str] = None,
+    max_sales: Optional[int] = Query(None, ge=0),
+):
+    """List games, paginated and optionally filtered.
+
+    Pages are 1-based: page 1 holds the first ``page_size`` games.
+    ``publisher`` matches the publisher name case-insensitively, so
+    ``nintendo`` and ``Nintendo`` return the same games. ``max_sales`` keeps
+    games that sold at most that many copies; ``max_sales=0`` lists the
+    free-to-play titles (sales of 0).
+    """
+    games = video_games
+    if publisher:
+        games = [g for g in games if g.publisher == publisher.lower()]
+    if max_sales:
+        games = [g for g in games if g.sales <= max_sales]
+
+    total = len(games)
+    total_pages = total // page_size + 1
+    start = page * page_size
+    items = games[start:start + page_size]
+    return {
+        "items": items,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages,
+    }
 
 # Vulnerable endpoint: No authentication required to get sensitive sales data
 @app.get("/games/{game_id}/sales")
