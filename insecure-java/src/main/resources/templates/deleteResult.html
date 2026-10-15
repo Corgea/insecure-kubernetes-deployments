@@ -1,11 +1,21 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
+<head th:replace="~{fragments :: head(title='Delete Result')}">
     <title>Delete Result</title>
 </head>
 <body>
-    <h2 th:text="${message}"></h2>
-    <!-- Educational Note: Deleting resources without authorization checks leads to broken access control. -->
-    <p><strong>Note:</strong> The picture was deleted without verifying your permissions.</p>
+    <header th:replace="~{fragments :: header(active='delete')}"></header>
+    <main class="container">
+        <section class="card">
+            <h2 class="page-title" th:text="${message}"></h2>
+            <!-- Educational Note: Deleting resources without authorization checks leads to broken access control. -->
+            <p class="callout"><strong>Note:</strong> The picture was deleted without verifying your permissions.</p>
+            <div class="form-actions">
+                <a class="btn" th:href="@{/search}">Search pictures</a>
+                <a class="btn btn-secondary" th:href="@{/delete}">Delete another</a>
+            </div>
+        </section>
+    </main>
+    <footer th:replace="~{fragments :: footer}"></footer>
 </body>
 </html>

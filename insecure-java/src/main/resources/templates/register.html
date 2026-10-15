@@ -1,21 +1,37 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
+<head th:replace="~{fragments :: head(title='Register')}">
     <title>Register</title>
 </head>
 <body>
-    <h2>Register</h2>
-    <!-- Vulnerability: Broken Authentication - Passwords are stored in plaintext without strength validation. -->
-    <p><strong>Note:</strong> This application stores passwords in plaintext. Please use a simple password for testing purposes.</p>
-    <form action="#" th:action="@{/register}" method="post">
-        <label>Username: <input type="text" name="username" value="user1" /></label><br/>
-        <label>Password: <input type="password" name="password" value="password123" /></label><br/>
-        <button type="submit">Register</button>
-    </form>
-    <p>Example Payload:</p>
-    <ul>
-        <li>Username: <code>user1</code></li>
-        <li>Password: <code>password123</code></li>
-    </ul>
+    <header th:replace="~{fragments :: header(active='register')}"></header>
+    <main class="container">
+        <section class="card">
+            <h2 class="page-title">Register</h2>
+            <!-- Vulnerability: Broken Authentication - Passwords are stored in plaintext without strength validation. -->
+            <p class="callout"><strong>Note:</strong> This application stores passwords in plaintext. Please use a simple password for testing purposes.</p>
+            <form action="#" th:action="@{/register}" method="post" class="form">
+                <label class="field">
+                    <span class="field-label">Username</span>
+                    <input type="text" name="username" value="user1" autocomplete="username" />
+                </label>
+                <label class="field">
+                    <span class="field-label">Password</span>
+                    <input type="password" name="password" value="password123" autocomplete="new-password" />
+                </label>
+                <div class="form-actions">
+                    <button type="submit" class="btn">Register</button>
+                </div>
+            </form>
+        </section>
+        <section class="card card-muted">
+            <h3>Example Payload</h3>
+            <ul class="plain-list">
+                <li>Username: <code>user1</code></li>
+                <li>Password: <code>password123</code></li>
+            </ul>
+        </section>
+    </main>
+    <footer th:replace="~{fragments :: footer}"></footer>
 </body>
 </html>

@@ -1,25 +1,43 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
+<head th:replace="~{fragments :: head(title='Home')}">
     <title>Home - Cat Picture App</title>
 </head>
 <body>
-    <header>
-        <h1>Welcome to the Cat Picture App</h1>
-        <nav>
-            <a th:href="@{/register}">Register</a> |
-            <a th:href="@{/login}">Login</a> |
-            <a th:href="@{/addComment}">Add Comment</a> |
-            <a th:href="@{/comments}">View Comments</a> |
-            <a th:href="@{/search}">Search Pictures</a> |
-            <a th:href="@{/delete}">Delete Picture</a>
-            <a th:href="@{/profile(userId=1)}">View Profile</a> |
-            <a th:href="@{/editProfile(userId=1)}">Edit Profile</a> |
-        </nav>
-    </header>
-    <main>
-        <p>This application demonstrates various security vulnerabilities for educational purposes.</p>
-        <p>Please select an option from the menu above to explore the functionalities.</p>
+    <header th:replace="~{fragments :: header(active='home')}"></header>
+    <main class="container">
+        <section class="card">
+            <h2 class="page-title">Welcome to the Cat Picture App</h2>
+            <p>This application demonstrates various security vulnerabilities for educational purposes.</p>
+            <p>Please select an option below or from the menu above to explore the functionalities.</p>
+        </section>
+        <section class="tile-grid">
+            <div class="card">
+                <h3>Account</h3>
+                <p>Create an account and sign in.</p>
+                <a class="btn btn-secondary" th:href="@{/register}">Register</a>
+                <a class="btn btn-secondary" th:href="@{/login}">Login</a>
+            </div>
+            <div class="card">
+                <h3>Comments</h3>
+                <p>Leave a comment and browse what others wrote.</p>
+                <a class="btn btn-secondary" th:href="@{/addComment}">Add Comment</a>
+                <a class="btn btn-secondary" th:href="@{/comments}">View Comments</a>
+            </div>
+            <div class="card">
+                <h3>Pictures</h3>
+                <p>Find cat pictures by name or remove one.</p>
+                <a class="btn btn-secondary" th:href="@{/search}">Search Pictures</a>
+                <a class="btn btn-secondary" th:href="@{/delete}">Delete Picture</a>
+            </div>
+            <div class="card">
+                <h3>Profile</h3>
+                <p>View and update a user profile.</p>
+                <a class="btn btn-secondary" th:href="@{/profile(userId=1)}">View Profile</a>
+                <a class="btn btn-secondary" th:href="@{/editProfile(userId=1)}">Edit Profile</a>
+            </div>
+        </section>
     </main>
+    <footer th:replace="~{fragments :: footer}"></footer>
 </body>
 </html>
