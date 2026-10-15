@@ -1,11 +1,12 @@
-from fastapi import FastAPI, HTTPException, Header, Request
-from typing import Optional
+from fastapi import FastAPI, HTTPException, Header, Query, Request
+from typing import Any, Dict, List, Optional
 from models import VideoGame, User
 from database import video_games, users
+import catalogue
 import sqlite3
 import os
 import requests
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 app = FastAPI(
     title="Intentionally Insecure Video Game API",
@@ -47,41 +48,77 @@ def init_db():
 def startup_event():
     init_db()
 
+@app.exception_handler(catalogue.GameNotFound)
+async def game_not_found(request: Request, exc: catalogue.GameNotFound) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": "Game not found"})
+
+def _bearer_token(authorization: Optional[str]) -> str:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    # Extract Bearer token
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid Authorization header format")
+    return authorization.split(" ")[1]
+
+def _require_admin(authorization: Optional[str]) -> User:
+    token = _bearer_token(authorization)
+    for user in users:
+        if user.token == token:
+            if user.is_admin:
+                return user
+            raise HTTPException(status_code=403, detail="Not authorized")
+    raise HTTPException(status_code=401, detail="Invalid token")
+
 # Public endpoint to get basic video game info
 @app.get("/games")
-def get_games():
-    return video_games
+def get_games() -> List[VideoGame]:
+    return catalogue.list_games(video_games)
+
+# Public endpoint: title search over the in-memory catalogue
+@app.get("/games/search")
+def search_catalogue(
+    q: str = Query(..., min_length=1, max_length=100),
+    limit: int = Query(20, ge=1, le=100),
+) -> List[VideoGame]:
+    return catalogue.search_titles(video_games, q, limit)
+
+@app.get("/games/top-sellers")
+def get_top_sellers(n: int = Query(10, ge=1, le=50)) -> List[VideoGame]:
+    return catalogue.top_sellers(video_games, n)
+
+@app.get("/games/stats")
+def get_catalogue_stats() -> Dict[str, Any]:
+    return catalogue.catalogue_stats(video_games)
+
+# Publisher names can contain "/" (e.g. "ZA/UM"), so the name is a query parameter, not a path segment
+@app.get("/games/by-publisher")
+def get_publisher_games(publisher: str = Query(..., min_length=1, max_length=100)) -> List[VideoGame]:
+    return catalogue.games_by_publisher(video_games, publisher)
+
+@app.get("/publishers/sales")
+def get_sales_by_publisher() -> Dict[str, int]:
+    return catalogue.sales_by_publisher(video_games)
+
+@app.get("/games/{game_id}")
+def get_game(game_id: int) -> VideoGame:
+    return catalogue.find_game(video_games, game_id)
 
 # Vulnerable endpoint: No authentication required to get sensitive sales data
 @app.get("/games/{game_id}/sales")
 def get_game_sales(game_id: int):
     # Vulnerability: No authentication or authorization checks (API1:2019 - Broken Object Level Authorization)
-    for game in video_games:
-        if game.id == game_id:
-            return {"title": game.title, "sales": game.sales}
-    raise HTTPException(status_code=404, detail="Game not found")
+    game = catalogue.find_game(video_games, game_id)
+    return {"title": game.title, "sales": game.sales}
 
 # Vulnerable endpoint: Weak authentication and improper authorization
 @app.post("/games")
 def add_game(game: VideoGame, Authorization: Optional[str] = Header(None)):
     # Vulnerability: Token sent in Authorization header without proper validation (API2:2019 - Broken Authentication)
-    if not Authorization:
-        raise HTTPException(status_code=401, detail="Authorization header required")
-
-    # Extract Bearer token
-    if not Authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid Authorization header format")
-    token = Authorization.split(" ")[1]
-
     # Vulnerability: Insecure token handling and authorization (API5:2019 - Broken Function Level Authorization)
-    for user in users:
-        if user.token == token:
-            if user.is_admin:
-                video_games.append(game)
-                return {"message": "Game added"}
-            else:
-                raise HTTPException(status_code=403, detail="Not authorized")
-    raise HTTPException(status_code=401, detail="Invalid token")
+    _require_admin(Authorization)
+    catalogue.add_game(video_games, game)
+    return {"message": "Game added"}
 
 # Vulnerable endpoint: Exposes sensitive user data
 @app.get("/users")
@@ -102,11 +139,8 @@ def login(username: str):
 @app.put("/games/{game_id}")
 def update_game(game_id: int, updated_game: VideoGame):
     # Vulnerability: Mass assignment allows overwriting of unintended fields (API6:2019 - Mass Assignment)
-    for i, game in enumerate(video_games):
-        if game.id == game_id:
-            video_games[i] = updated_game
-            return {"message": "Game updated"}
-    raise HTTPException(status_code=404, detail="Game not found")
+    catalogue.update_game(video_games, game_id, updated_game)
+    return {"message": "Game updated"}
 
 # Additional vulnerable endpoint: SQL Injection
 @app.get("/search")
@@ -146,22 +180,13 @@ def get_env():
 @app.post("/admin/delete_game")
 def delete_game(game_id: int, Authorization: Optional[str] = Header(None)):
     # Vulnerability: Actions are not logged (API10:2019 - Insufficient Logging & Monitoring)
-    if not Authorization:
-        raise HTTPException(status_code=401, detail="Authorization header required")
-
-    # Extract Bearer token
-    if not Authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid Authorization header format")
-    token = Authorization.split(" ")[1]
+    token = _bearer_token(Authorization)
 
     for user in users:
         if user.token == token and user.is_admin:
-            for i, game in enumerate(video_games):
-                if game.id == game_id:
-                    deleted_game = video_games.pop(i)
-                    # No logging of the deletion action
-                    return {"message": f"Game '{deleted_game.title}' deleted"}
-            raise HTTPException(status_code=404, detail="Game not found")
+            deleted_game = catalogue.delete_game(video_games, game_id)
+            # No logging of the deletion action
+            return {"message": f"Game '{deleted_game.title}' deleted"}
     raise HTTPException(status_code=403, detail="Not authorized")
 
 @app.post("/feedback")
