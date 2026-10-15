@@ -1,0 +1,87 @@
+/*
+ * Design tokens for the demo app. styles.css imports this file before any
+ * of its own rules, so every selector there can read these properties.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Palette */
+  --color-bg: #f9f9f9;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f4f4;
+  --color-text: #333333;
+  --color-heading: #333333;
+  --color-subheading: #444444;
+  --color-muted: #666666;
+  --color-border: #dddddd;
+  --color-primary: #4caf50;
+  --color-primary-hover: #45a049;
+  --color-on-primary: #ffffff;
+  --color-link: #4caf50;
+  --color-focus: #1e88e5;
+  --color-danger: #c62828;
+  --color-danger-hover: #b71c1c;
+  --color-on-danger: #ffffff;
+  --color-warning: #ef6c00;
+  --color-success: #2e7d32;
+  --color-info: #1565c0;
+  --shadow-card: 0 2px 5px rgba(0, 0, 0, 0.1);
+
+  /* Typography */
+  --font-body: Arial, sans-serif;
+  --font-mono: monospace;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 16px;
+  --line-height: 1.6;
+
+  /* Spacing scale */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 32px;
+
+  /* Shape and motion */
+  --radius-sm: 4px;
+  --radius-md: 5px;
+  --border-width: 1px;
+  --transition-base: 0.3s ease;
+  --content-width: 800px;
+  --content-width-wide: 960px;
+}
+
+/* dark theme */
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg: #121212;
+    --color-surface: #1e1e1e;
+    --color-surface-muted: #2a2a2a;
+    --color-text: #e0e0e0;
+    --color-heading: #f5f5f5;
+    --color-subheading: #d6d6d6;
+    --color-muted: #a0a0a0;
+    --color-border: #3a3a3a;
+    --color-primary: #66bb6a;
+    --color-primary-hover: #81c784;
+    --color-on-primary: #0d1f0e;
+    --color-link: #81c784;
+    --color-focus: #64b5f6;
+    --color-danger: #ef5350;
+    --color-danger-hover: #e57373;
+    --color-on-danger: #1f0a0a;
+    --color-warning: #ffa726;
+    --color-success: #66bb6a;
+    --color-info: #42a5f5;
+    --shadow-card: 0 2px 5px rgba(0, 0, 0, 0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-base: 0s;
+  }
+}
