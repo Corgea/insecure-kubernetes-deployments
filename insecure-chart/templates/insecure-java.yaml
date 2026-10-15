@@ -41,6 +41,13 @@ spec:
           env:
             - name: NODE_OPTIONS
               value: "--perf-basic-prof --interpreted-frames-native-stack"
+            # Used by OrderStatusConsumer to publish fulfilment events to the orders service.
+            - name: ORDERS_EVENT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.orders.eventTokenSecret | default "orders-event-token" }}
+                  key: token
+                  optional: true
           ports:
             - containerPort: {{ .Values.insecureJava.containerPort | default 3000 }}
 
