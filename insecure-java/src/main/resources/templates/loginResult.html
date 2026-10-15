@@ -1,11 +1,21 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
+<head th:replace="~{fragments :: head(title='Login Result')}">
     <title>Login Result</title>
 </head>
 <body>
-    <h2 th:text="${message}"></h2>
-    <!-- Educational Note: The lack of secure session management can lead to unauthorized access. -->
-    <p><strong>Note:</strong> The application does not implement secure session management, making it vulnerable to attacks.</p>
+    <header th:replace="~{fragments :: header(active='login')}"></header>
+    <main class="container">
+        <section class="card">
+            <h2 class="page-title" th:text="${message}"></h2>
+            <!-- Educational Note: The lack of secure session management can lead to unauthorized access. -->
+            <p class="callout"><strong>Note:</strong> The application does not implement secure session management, making it vulnerable to attacks.</p>
+            <div class="form-actions">
+                <a class="btn" th:href="@{/}">Back to home</a>
+                <a class="btn btn-secondary" th:href="@{/login}">Try again</a>
+            </div>
+        </section>
+    </main>
+    <footer th:replace="~{fragments :: footer}"></footer>
 </body>
 </html>

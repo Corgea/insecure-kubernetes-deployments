@@ -1,24 +1,35 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
+<head th:replace="~{fragments :: head(title='Comments')}">
     <title>Comments</title>
 </head>
 <body>
-    <h2>Comments</h2>
-    <!-- Vulnerability: CSRF - No protection against unauthorized requests -->
-    <p><strong>Note:</strong> Deleting comments does not require any CSRF token, making it vulnerable to CSRF attacks.</p>
-    <ul>
-        <li th:each="comment : ${comments}">
-            <span th:utext="${comment.text}"></span>
-            <form action="#" th:action="@{/deleteComment}" method="post" style="display:inline;">
-                <input type="hidden" name="commentId" th:value="${comment.id}" />
-                <button type="submit">Delete</button>
-            </form>
-        </li>
-    </ul>
-    <p>Example Attack:</p>
-    <ul>
-        <li>An attacker can craft a hidden form to delete a comment without the user's knowledge.</li>
-    </ul>
+    <header th:replace="~{fragments :: header(active='comments')}"></header>
+    <main class="container">
+        <section class="card">
+            <h2 class="page-title">Comments</h2>
+            <!-- Vulnerability: CSRF - No protection against unauthorized requests -->
+            <p class="callout"><strong>Note:</strong> Deleting comments does not require any CSRF token, making it vulnerable to CSRF attacks.</p>
+            <p class="callout callout-info" th:if="${message}" th:text="${message}"></p>
+            <ul class="item-list">
+                <li th:each="comment : ${comments}">
+                    <span th:text="${comment.text}}"></span>
+                    <form action="#" th:action="@{/deleteComments}" method="post" class="inline-form">
+                        <input type="hidden" name="commentId" th:value="${comment.id}" />
+                        <button type="submit" class="btn btn-danger btn-small">Delete</button>
+                    </form>
+                </li>
+            </ul>
+            <p class="empty-state" th:if="${#lists.isEmpty(comments)}">No comments yet.</p>
+            <a class="btn btn-secondary" th:href="@{/addComment}">Add a comment</a>
+        </section>
+        <section class="card card-muted">
+            <h3>Example Attack</h3>
+            <ul class="plain-list">
+                <li>An attacker can craft a hidden form to delete a comment without the user's knowledge.</li>
+            </ul>
+        </section>
+    </main>
+    <footer th:replace="~{fragments :: footer}"></footer>
 </body>
 </html>
