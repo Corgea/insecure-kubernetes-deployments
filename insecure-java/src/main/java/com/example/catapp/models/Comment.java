@@ -13,6 +13,10 @@ public class Comment {
     @Column(columnDefinition = "TEXT")
     private String text;
 
+    private int reportCount;
+
+    private boolean hidden;
+
     // Getters and Setters
 
     public int getId() {
@@ -31,5 +35,21 @@ public class Comment {
 
 	public void setText(String text) {
 		this.text = text;
+	}
+
+	public int getReportCount() {
+		return reportCount;
+	}
+
+	public void setReportCount(int reportCount) {
+		this.reportCount = reportCount;
+	}
+
+	public boolean isHidden() {
+		return hidden;
+	}
+
+	public void setHidden(boolean hidden) {
+		this.hidden = hidden;
 	}
 }
