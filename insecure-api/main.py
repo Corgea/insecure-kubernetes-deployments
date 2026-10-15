@@ -1,11 +1,14 @@
 from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
-from models import VideoGame, User
+from models import VideoGame, User, OrderRequest, OrderStatusEvent
 from database import video_games, users
+import hmac
 import sqlite3
 import os
 import requests
 from fastapi.responses import RedirectResponse
+import orders
 
 app = FastAPI(
     title="Intentionally Insecure Video Game API",
@@ -15,6 +18,24 @@ app = FastAPI(
         "name": "Your Name",
         "email": "your.email@example.com",
     },
+)
+
+# Shared secret the fulfilment side sends with order events (X-Orders-Event-Token).
+ORDERS_EVENT_TOKEN = os.environ.get("ORDERS_EVENT_TOKEN", "")
+
+# The storefront calls the orders API from the browser, so its origin has to be
+# allowed explicitly. Comma-separated; empty means same-origin only.
+ORDERS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("ORDERS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ORDERS_ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 # Initialize the SQLite database
@@ -212,3 +233,49 @@ def fetch_url_content(url: str):
 def unsafe_redirect(next: str):
     # Vulnerability: Unvalidated redirect (API10:2019 - Unsafe Consumption of APIs)
     return RedirectResponse(url=next)
+
+# Liveness/readiness probe and load balancer health check for the orders service
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}
+
+# Orders service: place an order
+@app.post("/orders", status_code=201)
+def place_order(request: OrderRequest):
+    try:
+        order = orders.create_order(request)
+    except orders.OrderStoreFull:
+        raise HTTPException(status_code=503, detail="Order store is full, try again later")
+    return orders.order_status_payload(order)
+
+# Orders service: current status, polled by the web client and the audit consumer
+@app.get("/orders/{order_id}/status")
+def get_order_status(order_id: str):
+    try:
+        order = orders.get_order(order_id)
+    except orders.OrderNotFound:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return orders.order_status_payload(order)
+
+# Orders service: fulfilment events (shipped, delivered, cancelled, warehouse scans)
+@app.post("/orders/{order_id}/events", status_code=202)
+def post_order_event(
+    order_id: str,
+    event: OrderStatusEvent,
+    x_orders_event_token: Optional[str] = Header(None),
+):
+    _require_event_token(x_orders_event_token)
+    try:
+        order, applied = orders.apply_status_event(order_id, event)
+    except orders.OrderNotFound:
+        raise HTTPException(status_code=404, detail="Order not found")
+    except orders.InvalidTransition as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {**orders.order_status_payload(order), "applied": applied}
+
+def _require_event_token(token: Optional[str]) -> None:
+    # Fail closed: without a configured secret nobody can move orders.
+    if not ORDERS_EVENT_TOKEN:
+        raise HTTPException(status_code=503, detail="Order events are not enabled")
+    if token is None or not hmac.compare_digest(token.encode(), ORDERS_EVENT_TOKEN.encode()):
+        raise HTTPException(status_code=401, detail="Invalid event token")
