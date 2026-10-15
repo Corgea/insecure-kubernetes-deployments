@@ -1,93 +1,108 @@
+@import url("theme.css");
+
 body {
-    font-family: Arial, sans-serif;
-    line-height: 1.6;
-    padding: 20px;
-    max-width: 800px;
-    margin: 0 auto;
-    background-color: #f9f9f9;
-    color: #333;
-  }
-  
-  h2 {
-    color: #333;
-    border-bottom: 2px solid #333;
-    padding-bottom: 10px;
-  }
-  
-  h3 {
-    color: #444;
-    margin-top: 20px;
-  }
-  
-  form > div {
-    margin-bottom: 20px;
-    padding: 15px;
-    background-color: #ffffff;
-    border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  }
-  
-  label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-  }
-  
-  input[type="text"],
-  textarea {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-  
-  textarea {
-    resize: vertical;
-  }
-  
-  small {
-    display: block;
-    color: #666;
-    font-style: italic;
-  }
-  
-  input[type="submit"] {
-    background-color: #4CAF50;
-    color: white;
-    padding: 10px 15px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
-  }
-  
-  input[type="submit"]:hover {
-    background-color: #45a049;
-  }
-  
-  ul {
-    padding-left: 20px;
-    list-style: square;
-  }
-  
-  pre {
-    background-color: #f4f4f4;
-    padding: 10px;
-    border-radius: 4px;
-    overflow-x: auto;
-    font-family: monospace;
-    font-size: 13px;
-  }
-  
-  a {
-    color: #4CAF50;
-    text-decoration: none;
-  }
-  
-  a:hover {
-    text-decoration: underline;
-  }
-  
+  font-family: var(--font-body);
+  line-height: var(--line-height);
+  padding: var(--space-5);
+  max-width: var(--content-width);
+  margin: 0 auto;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+h2 {
+  color: var(--color-heading);
+  border-bottom: 2px solid var(--color-heading);
+  padding-bottom: 10px;
+}
+
+h3 {
+  color: var(--color-subheading);
+  margin-top: var(--space-5);
+}
+
+form > div {
+  margin-bottom: var(--space-5);
+  padding: 15px;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+input[type="text"],
+textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+}
+
+textarea {
+  resize: vertical;
+}
+
+small {
+  display: block;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+input[type="submit"] {
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  padding: 10px 15px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-md);
+  transition: background-color var(--transition-base);
+}
+
+input[type="submit"]:hover {
+  background-color: var(--color-primary-hover);
+}
+
+ul {
+  padding-left: var(--space-5);
+  list-style: square;
+}
+
+code {
+  font-family: var(--font-mono);
+  padding: 0 var(--space-1);
+  background-color: var(--color-surface-muted);
+  border-radius: var(--radius-sm);
+}
+
+pre {
+  background-color: var(--color-surface-muted);
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+pre code {
+  padding: 0;
+  background-color: transparent;
+}
+
+a {
+  color: var(--color-link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
