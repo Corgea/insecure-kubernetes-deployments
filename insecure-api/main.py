@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Header, Request
 from typing import Optional
 from models import VideoGame, User
 from database import video_games, users
+from stats import games_per_decade, games_per_year
 import sqlite3
 import os
 import requests
@@ -51,6 +52,18 @@ def startup_event():
 @app.get("/games")
 def get_games():
     return video_games
+
+# Public endpoint: how many catalogue games were released each year and decade
+@app.get("/stats/release-years")
+def get_release_year_stats():
+    # Count from one snapshot so the total and both breakdowns agree even if
+    # a game is added or deleted while the request is being served.
+    games = list(video_games)
+    return {
+        "total": len(games),
+        "by_year": games_per_year(games),
+        "by_decade": games_per_decade(games),
+    }
 
 # Vulnerable endpoint: No authentication required to get sensitive sales data
 @app.get("/games/{game_id}/sales")
