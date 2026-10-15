@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.orders.namespace | default "orders" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.orders.service.name | default "orders" }}
+  namespace: {{ .Values.orders.namespace | default "orders" }}
+spec:
+  selector:
+    app: {{ .Values.orders.appName | default "orders" }}
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.orders.service.port | default 80 }}
+      targetPort: {{ .Values.orders.service.targetPort | default 8000 }}
+  type: ClusterIP
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.orders.appName | default "orders" }}
+  namespace: {{ .Values.orders.namespace | default "orders" }}
+spec:
+  replicas: {{ .Values.orders.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Values.orders.appName | default "orders" }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.orders.appName | default "orders" }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      containers:
+        - name: {{ .Values.orders.containerName | default "orders" }}
+          image: "{{ .Values.orders.image.repository }}:{{ .Values.orders.image.tag | default "latest" }}"
+          env:
+            - name: ORDERS_ALLOWED_ORIGINS
+              value: {{ .Values.orders.allowedOrigins | default "" | quote }}
+            - name: ORDERS_EVENT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.orders.eventTokenSecret | default "orders-event-token" }}
+                  key: token
+                  # Without the secret the service still serves orders; it refuses events.
+                  optional: true
+          ports:
+            - name: http
+              containerPort: {{ .Values.orders.containerPort | default 8000 }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          {{- with .Values.orders.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- if .Values.orders.targetGroupArn }}
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: {{ .Values.orders.appName | default "orders" }}
+  namespace: {{ .Values.orders.namespace | default "orders" }}
+spec:
+  serviceRef:
+    name: {{ .Values.orders.service.name | default "orders" }}
+    port: {{ .Values.orders.service.port | default 80 }}
+  targetGroupARN: {{ .Values.orders.targetGroupArn }}
+  targetType: ip
+  {{- if .Values.orders.lbSecurityGroupId }}
+  networking:
+    ingress:
+      - from:
+          - securityGroup:
+              groupID: {{ .Values.orders.lbSecurityGroupId }}
+        ports:
+          - protocol: TCP
+  {{- end }}
+{{- end }}
