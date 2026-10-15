@@ -5,6 +5,7 @@ import com.example.catapp.models.Album.Visibility;
 import com.example.catapp.models.CatPicture;
 import com.example.catapp.repositories.AlbumRepository;
 import com.example.catapp.repositories.CatPictureRepository;
+import com.example.catapp.repositories.ShareLinkRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,10 +27,14 @@ public class AlbumService {
 
     private final AlbumRepository albumRepository;
     private final CatPictureRepository catPictureRepository;
+    private final ShareLinkRepository shareLinkRepository;
 
-    public AlbumService(AlbumRepository albumRepository, CatPictureRepository catPictureRepository) {
+    public AlbumService(AlbumRepository albumRepository,
+                        CatPictureRepository catPictureRepository,
+                        ShareLinkRepository shareLinkRepository) {
         this.albumRepository = albumRepository;
         this.catPictureRepository = catPictureRepository;
+        this.shareLinkRepository = shareLinkRepository;
     }
 
     public List<Album> albumsOwnedBy(int userId) {
@@ -68,7 +73,8 @@ public class AlbumService {
     }
 
     /**
-     * Private albums are visible to their owner only; unlisted and public albums to anyone.
+     * Private albums are visible to their owner only; unlisted and public albums to anyone. Share
+     * links do not go through this check, see {@link ShareLinkService#redeem(String)}.
      */
     public boolean canView(Album album, Integer userId) {
         if (album.getVisibility() == Visibility.PRIVATE) {
@@ -153,6 +159,7 @@ public class AlbumService {
     @Transactional
     public void delete(int albumId, int userId) {
         Album album = getOwnedAlbum(albumId, userId);
+        shareLinkRepository.deleteByAlbumId(album.getId());
         albumRepository.delete(album);
     }
 
@@ -174,6 +181,8 @@ public class AlbumService {
             // Albums are ordered oldest first, so the first equal album is the one we keep.
             Album original = albums.stream().filter(duplicate::equals).findFirst().orElseThrow();
             original.getPictureIds().addAll(duplicate.getPictureIds());
+            // Links already handed out for the duplicate keep working and open the merged album.
+            shareLinkRepository.moveToAlbum(duplicate.getId(), original.getId());
             albumRepository.delete(duplicate);
         }
         return duplicates.size();
