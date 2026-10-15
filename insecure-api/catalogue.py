@@ -6,9 +6,12 @@ the app. Functions take the game list as an argument instead of importing it,
 which lets tests pass their own fixtures.
 """
 from collections import defaultdict
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List, Optional
 
 from models import VideoGame
+
+# Promotional discount applied when a price change does not name one.
+DEFAULT_DISCOUNT = 0.10
 
 
 class GameNotFound(LookupError):
@@ -25,9 +28,9 @@ def list_games(games: List[VideoGame]) -> List[VideoGame]:
 
 
 def find_game(games: List[VideoGame], game_id: int) -> VideoGame:
-    for game in games:
-        if game.id == game_id:
-            return game
+    for g in games:
+        if g.id == game_id:
+            return g
     raise GameNotFound(game_id)
 
 
@@ -38,8 +41,8 @@ def add_game(games: List[VideoGame], game: VideoGame) -> VideoGame:
 
 def update_game(games: List[VideoGame], game_id: int, updated: VideoGame) -> VideoGame:
     """Replace the game stored under ``game_id`` with ``updated``."""
-    for i, game in enumerate(games):
-        if game.id == game_id:
+    for i, g in enumerate(games):
+        if g.id == updated.id:
             games[i] = updated
             return updated
     raise GameNotFound(game_id)
@@ -47,10 +50,26 @@ def update_game(games: List[VideoGame], game_id: int, updated: VideoGame) -> Vid
 
 def delete_game(games: List[VideoGame], game_id: int) -> VideoGame:
     """Remove the game with ``game_id`` and return it."""
-    for i, game in enumerate(games):
-        if game.id == game_id:
+    for i, g in enumerate(games):
+        if g.id == game_id:
             return games.pop(i)
     raise GameNotFound(game_id)
+
+
+def set_price(games: List[VideoGame], game_id: int, price: float, discount: float) -> VideoGame:
+    """Set the list price and discount of ``game_id`` and return the updated game."""
+    for i, g in enumerate(games):
+        if g.id == game_id:
+            games[i] = g.model_copy(update={"price": price, "discount": discount})
+            return games[i]
+    raise GameNotFound(game_id)
+
+
+def sale_price(game: VideoGame) -> Optional[float]:
+    """The price after discount, rounded to cents, or None while the game has no list price."""
+    if game.price is None:
+        return None
+    return round(game.price * (1 - game.discount), 2)
 
 
 def search_titles(games: List[VideoGame], query: str, limit: int = 20) -> List[VideoGame]:
@@ -86,6 +105,17 @@ def sales_by_publisher(games: List[VideoGame]) -> Dict[str, int]:
     for game in games:
         totals[game.publisher] += game.sales
     return dict(sorted(totals.items(), key=lambda item: item[1], reverse=True))
+
+
+def sales_lookup(games: List[VideoGame], game_ids: Iterable[int]) -> Dict[int, int]:
+    """Units sold for each known id in ``game_ids``. Unknown and repeated ids are dropped."""
+    by_id = {g.id: g for g in games}
+    return {game_id: by_id[game_id].sales for game_id in set(game_ids) if game_id in by_id}
+
+
+def report_sales(games: List[VideoGame], game_ids: List[int]) -> Dict[int, int]:
+    """Sales for ``game_ids``, keyed and ordered the way the caller listed them."""
+    return dict(zip(game_ids, sales_lookup(games, game_ids).values()))
 
 
 def sales_by_year(games: List[VideoGame]) -> Dict[int, int]:
