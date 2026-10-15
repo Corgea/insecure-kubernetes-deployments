@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+    Shared page chrome for the Cat Picture App.
+    Pages pull these in with th:replace, for example:
+        <head th:replace="~{fragments :: head(title='Login')}"></head>
+        <header th:replace="~{fragments :: header(active='login')}"></header>
+        <footer th:replace="~{fragments :: footer}"></footer>
+-->
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="|${title} - #{app.name}|">Cat Picture App</title>
+    <style>
+        :root {
+            --accent: #b4530a;
+            --accent-dark: #8a3f07;
+            --danger: #b42318;
+            --text: #1f2933;
+            --muted: #52606d;
+            --border: #d9dee3;
+            --surface: #ffffff;
+            --page: #f5f3ef;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5; color: var(--text); background: var(--page); }
+        a { color: var(--accent); }
+        .site-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; }
+        .brand { font-size: 1.25rem; font-weight: 700; color: var(--text); text-decoration: none; }
+        .site-nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-top: 0.5rem; }
+        .site-nav a { color: var(--muted); text-decoration: none; padding: 0.125rem 0; border-bottom: 2px solid transparent; }
+        .site-nav a:hover, .site-nav a.is-active { color: var(--text); border-bottom-color: var(--accent); }
+        .container { max-width: 52rem; margin: 0 auto; padding: 1.5rem; }
+        .page-title { margin: 0 0 1rem; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+        .card-muted { background: transparent; }
+        .callout { border-left: 4px solid var(--accent); background: #fdf3e7; padding: 0.75rem 1rem; margin: 0 0 1rem; }
+        .callout-info { border-left-color: #2f6fb0; background: #eaf2fb; }
+        .form { display: grid; gap: 0.875rem; max-width: 26rem; }
+        .field { display: grid; gap: 0.25rem; }
+        .field-label { font-weight: 600; font-size: 0.875rem; }
+        .field input, .field textarea { font: inherit; padding: 0.5rem 0.625rem; border: 1px solid var(--border); border-radius: 6px; }
+        .form-actions { display: flex; gap: 0.5rem; }
+        .btn { display: inline-block; font: inherit; font-weight: 600; padding: 0.5rem 1rem; border: 0; border-radius: 6px; color: #ffffff; background: var(--accent); text-decoration: none; cursor: pointer; }
+        .btn:hover { background: var(--accent-dark); }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover { background: #8f1c13; }
+        .btn-small { padding: 0.25rem 0.625rem; font-size: 0.875rem; }
+        .btn-secondary { color: var(--accent); background: transparent; border: 1px solid var(--accent); }
+        .btn-secondary:hover { color: #ffffff; }
+        .plain-list { margin: 0; padding-left: 1.25rem; }
+        .item-list { list-style: none; margin: 0; padding: 0; }
+        .item-list > li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+        .inline-form { margin: 0; }
+        .picture-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 1rem; }
+        .picture-grid img { display: block; width: 100%; height: auto; border-radius: 6px; }
+        .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 1rem; }
+        .empty-state { color: var(--muted); font-style: italic; }
+        .site-footer { color: var(--muted); font-size: 0.875rem; text-align: center; padding: 1.5rem; }
+    </style>
+</head>
+<body>
+
+<header th:fragment="header(active)" class="site-header">
+    <a class="brand" th:href="@{/}" th:text="#{app.name}">Cat Picture App</a>
+    <nav class="site-nav">
+        <a th:href="@{/}" th:classappend="${active == 'home'} ? 'is-active'" th:text="#{nav.home}">Home</a>
+        <a th:href="@{/register}" th:classappend="${active == 'register'} ? 'is-active'" th:text="#{nav.register}">Register</a>
+        <a th:href="@{/login}" th:classappend="${active == 'login'} ? 'is-active'" th:text="#{nav.login}">Login</a>
+        <a th:href="@{/addComment}" th:classappend="${active == 'addComment'} ? 'is-active'" th:text="#{nav.addComment}">Add Comment</a>
+        <a th:href="@{/comments}" th:classappend="${active == 'comments'} ? 'is-active'" th:text="#{nav.comments}">View Comments</a>
+        <a th:href="@{/search}" th:classappend="${active == 'search'} ? 'is-active'" th:text="#{nav.search}">Search Pictures</a>
+        <a th:href="@{/delete}" th:classappend="${active == 'delete'} ? 'is-active'" th:text="#{nav.delete}">Delete Picture</a>
+        <a th:href="@{/profile(userId=1)}" th:classappend="${active == 'profile'} ? 'is-active'" th:text="#{nav.profile}">View Profile</a>
+    </nav>
+</header>
+
+<footer th:fragment="footer" class="site-footer">
+    <!-- The notice is a fixed entry in messages.properties and carries its own markup. -->
+    <p th:utext="#{footer.notice}">Made with love for cat lovers</p>
+    <p>
+        <a href="https://github.com/Corgea/insecure-kubernetes-deployments" target="_blank" rel="noopener noreferrer"
+           th:text="#{footer.source}">Source code</a>
+    </p>
+</footer>
+
+</body>
+</html>
