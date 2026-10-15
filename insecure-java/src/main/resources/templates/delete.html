@@ -1,19 +1,32 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
+<head th:replace="~{fragments :: head(title='Delete Picture')}">
     <title>Delete Picture</title>
 </head>
 <body>
-    <h2>Delete Cat Picture</h2>
-    <!-- Vulnerability: Broken Access Control - No authorization checks are performed. -->
-    <p><strong>Note:</strong> This function lacks access control. Any user can delete any picture by specifying its ID.</p>
-    <form action="#" th:action="@{/delete}" method="post">
-        <label>Picture ID: <input type="number" name="id" value="1" /></label><br/>
-        <button type="submit">Delete</button>
-    </form>
-    <p>Example Payload:</p>
-    <ul>
-        <li>Picture ID: <code>1</code></li>
-    </ul>
+    <header th:replace="~{fragments :: header(active='delete')}"></header>
+    <main class="container">
+        <section class="card">
+            <h2 class="page-title">Delete Cat Picture</h2>
+            <!-- Vulnerability: Broken Access Control - No authorization checks are performed. -->
+            <p class="callout"><strong>Note:</strong> This function lacks access control. Any user can delete any picture by specifying its ID.</p>
+            <form action="#" th:action="@{/delete}" method="post" class="form">
+                <label class="field">
+                    <span class="field-label">Picture ID</span>
+                    <input type="number" name="id" value="1" />
+                </label>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </section>
+        <section class="card card-muted">
+            <h3>Example Payload</h3>
+            <ul class="plain-list">
+                <li>Picture ID: <code>1</code></li>
+            </ul>
+        </section>
+    </main>
+    <footer th:replace="~{fragments :: footer}"></footer>
 </body>
 </html>
