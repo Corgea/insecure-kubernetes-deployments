@@ -63,3 +63,44 @@ variable "backup_retention_days" {
     error_message = "backup_retention_days must be between 7 and 400."
   }
 }
+
+
+variable "alert_emails" {
+  description = "Email addresses subscribed to the alerts topic. Each address has to confirm the subscription email before it receives alerts."
+  type        = list(string)
+  default     = []
+}
+
+variable "db_cpu_alarm_percent" {
+  description = "Average database CPU utilization, in percent, above which the CPU alarm fires"
+  type        = number
+  default     = 80
+
+  validation {
+    condition     = var.db_cpu_alarm_percent > 0 && var.db_cpu_alarm_percent < 100
+    error_message = "db_cpu_alarm_percent must be between 0 and 100."
+  }
+}
+
+variable "db_free_storage_alarm_gib" {
+  description = "Free database storage, in GiB, below which the storage alarm fires"
+  type        = number
+  default     = 5
+
+  validation {
+    # The smallest allocation is 20 GiB, so the alarm must fire before that fills.
+    condition     = var.db_free_storage_alarm_gib > 0 && var.db_free_storage_alarm_gib < 20
+    error_message = "db_free_storage_alarm_gib must be greater than 0 and less than 20."
+  }
+}
+
+variable "db_alarm_evaluation_periods" {
+  description = "Consecutive five-minute periods a database metric has to breach its threshold before the alarm fires"
+  type        = number
+  default     = 3
+
+  validation {
+    condition     = var.db_alarm_evaluation_periods >= 1 && var.db_alarm_evaluation_periods <= 12
+    error_message = "db_alarm_evaluation_periods must be between 1 and 12."
+  }
+}

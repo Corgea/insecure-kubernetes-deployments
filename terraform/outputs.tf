@@ -67,3 +67,18 @@ output "backup_plan_id" {
   description = "AWS Backup plan ID, or null when backups are disabled"
   value       = one(aws_backup_plan.main[*].id)
 }
+
+
+output "alerts_topic_arn" {
+  description = "SNS topic the database alarms notify"
+  value       = aws_sns_topic.alerts.arn
+}
+
+output "db_alarm_names" {
+  description = "CloudWatch alarms watching the Postgres instance"
+  value = [
+    aws_cloudwatch_metric_alarm.db_cpu.alarm_name,
+    aws_cloudwatch_metric_alarm.db_free_storage.alarm_name,
+    aws_cloudwatch_metric_alarm.db_freeable_memory.alarm_name,
+  ]
+}
