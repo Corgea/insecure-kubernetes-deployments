@@ -1,0 +1,54 @@
+# Every image builds with the repository root as its context
+# (docker build -f <service>/Dockerfile .), so this file applies to all of them.
+# Keep the context down to the sources the Dockerfiles copy.
+
+# VCS, CI and editor files
+.git
+.github
+.gitignore
+.gitmodules
+**/.idea
+**/.vscode
+**/*.swp
+**/.DS_Store
+
+# Local environment files
+.env
+**/.env
+**/.env.*
+
+# Scanner reports and SBOMs (several MB each)
+**/*.sarif
+**/*.sarif.json
+**/bom.json
+
+# Docs and repo metadata
+**/*.md
+insecure-api/README
+CODEOWNERS
+.dryrunsecurity.yaml
+
+# Infrastructure, not part of any image
+terraform/
+insecure-chart/
+llm-testing/
+
+# Python
+**/__pycache__
+**/*.py[cod]
+**/.venv
+**/venv
+
+# Node: dependencies are installed inside the image
+**/node_modules
+**/npm-debug.log*
+
+# Java: the jar is built inside the image
+insecure-java/build
+insecure-java/.gradle
+insecure-java/bin
+insecure-java/out
+
+# Databases created or seeded at build or start-up
+insecure-api/videogames.db
+insecure-js/data.db
