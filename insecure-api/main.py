@@ -1,11 +1,15 @@
-from fastapi import FastAPI, HTTPException, Header, Request
-from typing import Optional
-from models import VideoGame, User
+from fastapi import FastAPI, HTTPException, Header, Query, Request
+from typing import Any, Dict, List, Optional
+from models import PriceUpdate, VideoGame, User
 from database import video_games, users
+import cache
+import catalogue
+import export
+import reports
 import sqlite3
 import os
 import requests
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 app = FastAPI(
     title="Intentionally Insecure Video Game API",
@@ -47,41 +51,135 @@ def init_db():
 def startup_event():
     init_db()
 
+@app.exception_handler(catalogue.GameNotFound)
+async def game_not_found(request: Request, exc: catalogue.GameNotFound) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": "Game not found"})
+
+def _bearer_token(authorization: Optional[str]) -> str:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    # Extract Bearer token
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid Authorization header format")
+    return authorization.split(" ")[1]
+
+def _current_user(authorization: Optional[str]) -> User:
+    token = _bearer_token(authorization)
+    for user in users:
+        if user.token == token:
+            return user
+    raise HTTPException(status_code=401, detail="Invalid token")
+
+def _require_admin(authorization: Optional[str]) -> User:
+    user = _current_user(authorization)
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return user
+
+# Cached read views; every write to the catalogue invalidates the ones it can change
+STATS_VIEW = "catalogue:stats"
+PUBLISHER_SALES_VIEW = "catalogue:sales-by-publisher"
+
+def _game_view(game_id: int) -> str:
+    return f"catalogue:game:{game_id}"
+
+def _invalidate_views(*game_ids: int) -> None:
+    cache.invalidate(STATS_VIEW, PUBLISHER_SALES_VIEW, *(_game_view(game_id) for game_id in game_ids))
+
 # Public endpoint to get basic video game info
 @app.get("/games")
-def get_games():
-    return video_games
+def get_games() -> List[VideoGame]:
+    return catalogue.list_games(video_games)
+
+# Public endpoint: title search over the in-memory catalogue
+@app.get("/games/search")
+def search_catalogue(
+    q: str = Query(..., min_length=1, max_length=100),
+    limit: int = Query(20, ge=1, le=100),
+) -> List[VideoGame]:
+    return catalogue.search_titles(video_games, q, limit)
+
+@app.get("/games/top-sellers")
+def get_top_sellers(n: int = Query(10, ge=1, le=50)) -> List[VideoGame]:
+    return catalogue.top_sellers(video_games, n)
+
+@app.get("/games/stats")
+def get_catalogue_stats() -> Dict[str, Any]:
+    return cache.get_or_compute(STATS_VIEW, lambda: catalogue.catalogue_stats(video_games))
+
+# Publisher names can contain "/" (e.g. "ZA/UM"), so the name is a query parameter, not a path segment
+@app.get("/games/by-publisher")
+def get_publisher_games(publisher: str = Query(..., min_length=1, max_length=100)) -> List[VideoGame]:
+    return catalogue.games_by_publisher(video_games, publisher)
+
+@app.get("/publishers/sales")
+def get_sales_by_publisher() -> Dict[str, int]:
+    return cache.get_or_compute(PUBLISHER_SALES_VIEW, lambda: catalogue.sales_by_publisher(video_games))
+
+# Sales for a list of games, e.g. /reports/sales?game_ids=3,1,7
+@app.get("/reports/sales")
+def get_sales_report(
+    game_ids: str = Query(..., min_length=1, max_length=500),
+    Authorization: Optional[str] = Header(None),
+) -> Dict[str, Any]:
+    _current_user(Authorization)
+    try:
+        ids = [int(part) for part in game_ids.split(",") if part.strip()]
+    except ValueError as exc:
+        raise HTTPException(400, detail="game_ids must be a comma-separated list of integers") from exc
+    return {"sales": catalogue.report_sales(video_games, ids)}
+
+# Dashboard table: the catalogue ranked by units sold, e.g. /reports/games?page=2&per_page=25
+@app.get("/reports/games")
+def get_games_report(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(reports.DEFAULT_PAGE_SIZE, ge=1, le=reports.MAX_PAGE_SIZE),
+    Authorization: Optional[str] = Header(None),
+) -> Dict[str, Any]:
+    _current_user(Authorization)
+    ranked = reports.rank_by_sales(video_games)
+    return reports.paginate(ranked, page, per_page).as_dict()
+
+@app.get("/reports/publishers")
+def get_publisher_report(Authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    _current_user(Authorization)
+    return {"publishers": reports.publisher_share(video_games)}
+
+# Units per release year, optionally for one publisher, e.g. /reports/trend?publisher=Capcom
+@app.get("/reports/trend")
+def get_sales_trend(
+    publisher: Optional[str] = Query(None, min_length=1, max_length=100),
+    Authorization: Optional[str] = Header(None),
+) -> Dict[str, Any]:
+    _current_user(Authorization)
+    games = catalogue.games_by_publisher(video_games, publisher) if publisher else video_games
+    if not games:
+        raise HTTPException(status_code=404, detail="No games for that publisher")
+    return {"publisher": publisher, "years": reports.yearly_trend(games)}
+
+@app.get("/games/{game_id}")
+def get_game(game_id: int) -> Dict[str, Any]:
+    return cache.get_or_compute(
+        _game_view(game_id), lambda: catalogue.find_game(video_games, game_id).model_dump()
+    )
 
 # Vulnerable endpoint: No authentication required to get sensitive sales data
 @app.get("/games/{game_id}/sales")
 def get_game_sales(game_id: int):
     # Vulnerability: No authentication or authorization checks (API1:2019 - Broken Object Level Authorization)
-    for game in video_games:
-        if game.id == game_id:
-            return {"title": game.title, "sales": game.sales}
-    raise HTTPException(status_code=404, detail="Game not found")
+    game = catalogue.find_game(video_games, game_id)
+    return {"title": game.title, "sales": game.sales}
 
 # Vulnerable endpoint: Weak authentication and improper authorization
 @app.post("/games")
 def add_game(game: VideoGame, Authorization: Optional[str] = Header(None)):
     # Vulnerability: Token sent in Authorization header without proper validation (API2:2019 - Broken Authentication)
-    if not Authorization:
-        raise HTTPException(status_code=401, detail="Authorization header required")
-
-    # Extract Bearer token
-    if not Authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid Authorization header format")
-    token = Authorization.split(" ")[1]
-
     # Vulnerability: Insecure token handling and authorization (API5:2019 - Broken Function Level Authorization)
-    for user in users:
-        if user.token == token:
-            if user.is_admin:
-                video_games.append(game)
-                return {"message": "Game added"}
-            else:
-                raise HTTPException(status_code=403, detail="Not authorized")
-    raise HTTPException(status_code=401, detail="Invalid token")
+    _require_admin(Authorization)
+    catalogue.add_game(video_games, game)
+    _invalidate_views(game.id)
+    return {"message": "Game added"}
 
 # Vulnerable endpoint: Exposes sensitive user data
 @app.get("/users")
@@ -102,11 +200,63 @@ def login(username: str):
 @app.put("/games/{game_id}")
 def update_game(game_id: int, updated_game: VideoGame):
     # Vulnerability: Mass assignment allows overwriting of unintended fields (API6:2019 - Mass Assignment)
-    for i, game in enumerate(video_games):
-        if game.id == game_id:
-            video_games[i] = updated_game
-            return {"message": "Game updated"}
-    raise HTTPException(status_code=404, detail="Game not found")
+    catalogue.update_game(video_games, game_id, updated_game)
+    _invalidate_views(game_id, updated_game.id)
+    return {"message": "Game updated"}
+
+# Admin endpoint: change a game's list price and promotional discount
+@app.post("/games/{game_id}/price")
+def set_game_price(
+    game_id: int,
+    payload: PriceUpdate,
+    Authorization: Optional[str] = Header(None),
+) -> Dict[str, Any]:
+    _require_admin(Authorization)
+    discount = payload.discount or catalogue.DEFAULT_DISCOUNT
+    game = catalogue.set_price(video_games, game_id, payload.price, discount)
+    _invalidate_views(game_id)
+    return {
+        "id": game.id,
+        "price": game.price,
+        "discount": game.discount,
+        "sale_price": catalogue.sale_price(game),
+    }
+
+# CSV export of the catalogue, e.g. POST /exports?columns=title,sales&publisher=Nintendo
+@app.post("/exports")
+def create_export(
+    columns: Optional[str] = Query(None, max_length=200),
+    publisher: Optional[str] = Query(None, max_length=100),
+    Authorization: Optional[str] = Header(None),
+) -> Dict[str, Any]:
+    _current_user(Authorization)
+    if publisher:
+        games = catalogue.games_by_publisher(video_games, publisher)
+    else:
+        games = catalogue.list_games(video_games)
+    try:
+        handle = export.create_export(games, columns)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "token": handle.token,
+        "rows": handle.rows,
+        "expires_at": handle.expires_at,
+        "download_url": f"/exports/{handle.token}",
+    }
+
+# The token in the link is the credential, so this works without an Authorization header
+@app.get("/exports/{token}")
+def download_export(token: str) -> Response:
+    try:
+        content = export.read_export(token)
+    except export.ExportNotFound:
+        raise HTTPException(status_code=404, detail="Export not found") from None
+    return Response(
+        content=content,
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="games.csv"'},
+    )
 
 # Additional vulnerable endpoint: SQL Injection
 @app.get("/search")
@@ -146,22 +296,14 @@ def get_env():
 @app.post("/admin/delete_game")
 def delete_game(game_id: int, Authorization: Optional[str] = Header(None)):
     # Vulnerability: Actions are not logged (API10:2019 - Insufficient Logging & Monitoring)
-    if not Authorization:
-        raise HTTPException(status_code=401, detail="Authorization header required")
-
-    # Extract Bearer token
-    if not Authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid Authorization header format")
-    token = Authorization.split(" ")[1]
+    token = _bearer_token(Authorization)
 
     for user in users:
         if user.token == token and user.is_admin:
-            for i, game in enumerate(video_games):
-                if game.id == game_id:
-                    deleted_game = video_games.pop(i)
-                    # No logging of the deletion action
-                    return {"message": f"Game '{deleted_game.title}' deleted"}
-            raise HTTPException(status_code=404, detail="Game not found")
+            deleted_game = catalogue.delete_game(video_games, game_id)
+            _invalidate_views(game_id)
+            # No logging of the deletion action
+            return {"message": f"Game '{deleted_game.title}' deleted"}
     raise HTTPException(status_code=403, detail="Not authorized")
 
 @app.post("/feedback")
