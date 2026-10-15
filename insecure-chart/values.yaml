@@ -67,3 +67,31 @@ insecureApi:
     repository: confusedcrib/insecure-api
     tag: latest
   containerPort: 8000
+
+orders:
+  namespace: orders
+  appName: orders
+  containerName: orders
+  service:
+    name: orders
+    port: 80
+    targetPort: 8000
+  # Orders are held in memory by the service, so it runs as a single replica.
+  replicas: 1
+  image:
+    repository: confusedcrib/insecure-api-orders
+    tag: latest
+  containerPort: 8000
+  # Browser origins allowed to call the orders API (comma-separated), e.g. the storefront.
+  allowedOrigins: ""
+  # Secret with the fulfilment event token under the key `token`.
+  eventTokenSecret: orders-event-token
+  # From `terraform output`: registers the pods with the orders load balancer.
+  targetGroupArn: ""
+  lbSecurityGroupId: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
