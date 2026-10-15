@@ -1,17 +1,27 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
+<head th:replace="~{fragments :: head(title='Search Results')}">
     <title>Search Results</title>
 </head>
 <body>
-    <h2>Search Results</h2>
-    <p>Results for your search query:</p>
-    <ul>
-        <li th:each="picture : ${pictures}">
-            <img th:src="${picture.url}" th:alt="${picture.name}" width="200"/><br/>
-            <span th:text="${picture.name}"></span>
-        </li>
-    </ul>
-    <!-- Educational Note: If you used the SQL Injection payload, you might see all records returned. -->
+    <header th:replace="~{fragments :: header(active='search')}"></header>
+    <main class="container">
+        <section class="card">
+            <h2 class="page-title">Search Results</h2>
+            <p>Results for your search query:</p>
+            <ul class="picture-grid">
+                <li th:each="picture : ${pictures}">
+                    <a th:href="${picture.url}" target="_blank">
+                        <img th:src="${picture.url}" th:alt="${picture.name}" width="200" loading="lazy"/>
+                    </a>
+                    <span th:text="${picture.name}"></span>
+                </li>
+            </ul>
+            <p class="empty-state" th:if="${#lists.isEmpty(pictures)}">No pictures matched your search.</p>
+            <a class="btn btn-secondary" th:href="@{/search}">New search</a>
+            <!-- Educational Note: If you used the SQL Injection payload, you might see all records returned. -->
+        </section>
+    </main>
+    <footer th:replace="~{fragments :: footer}"></footer>
 </body>
 </html>

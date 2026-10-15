@@ -1,20 +1,32 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
+<head th:replace="~{fragments :: head(title='Add Comment')}">
     <title>Add Comment</title>
 </head>
 <body>
-    <h2>Add Comment</h2>
-    <!-- Vulnerability: Cross-Site Scripting (XSS) - User input is not sanitized before being displayed. -->
-    <p><strong>Note:</strong> This page is vulnerable to XSS attacks. Malicious scripts can be injected via the comment field. When you view comments, they will activate.</p>
-    <form action="#" th:action="@{/addComment}" method="post">
-        <label>Comment:</label><br/>
-        <textarea name="commentText" rows="4" cols="50">&lt;script&gt;alert('XSS Attack');&lt;/script&gt;</textarea><br/>
-        <button type="submit">Add Comment</button>
-    </form>
-    <p>Example Payload:</p>
-    <ul>
-        <li>Comment Text: <code>&lt;script&gt;alert('XSS Attack');&lt;/script&gt;</code></li>
-    </ul>
+    <header th:replace="~{fragments :: header(active='addComment')}"></header>
+    <main class="container">
+        <section class="card">
+            <h2 class="page-title">Add Comment</h2>
+            <!-- Vulnerability: Cross-Site Scripting (XSS) - User input is not sanitized before being displayed. -->
+            <p class="callout"><strong>Note:</strong> This page is vulnerable to XSS attacks. Malicious scripts can be injected via the comment field. When you view comments, they will activate.</p>
+            <form action="#" th:action="@{/addComment}" method="post" class="form">
+                <label class="field">
+                    <span class="field-label">Comment</span>
+                    <textarea name="commentText" rows="4" cols="50">&lt;script&gt;alert('XSS Attack');&lt;/script&gt;</textarea>
+                </label>
+                <div class="form-actions">
+                    <button type="submit" class="btn">Add Comment</button>
+                </div>
+            </form>
+        </section>
+        <section class="card card-muted">
+            <h3>Example Payload</h3>
+            <ul class="plain-list">
+                <li>Comment Text: <code>&lt;script&gt;alert('XSS Attack');&lt;/script&gt;</code></li>
+            </ul>
+        </section>
+    </main>
+    <footer th:replace="~{fragments :: footer}"></footer>
 </body>
 </html>

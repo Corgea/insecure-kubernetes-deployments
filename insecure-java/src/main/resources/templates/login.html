@@ -1,21 +1,47 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
+<head th:replace="~{fragments :: head(title='Login')}">
     <title>Login</title>
 </head>
 <body>
-    <h2>Login</h2>
-    <!-- Vulnerability: Broken Authentication - Insecure authentication mechanism without proper session handling. -->
-    <p><strong>Note:</strong> The login process lacks secure session management and uses plaintext passwords.</p>
-    <form action="#" th:action="@{/login}" method="post">
-        <label>Username: <input type="text" name="username" value="user1" /></label><br/>
-        <label>Password: <input type="password" name="password" value="password123" /></label><br/>
-        <button type="submit">Login</button>
-    </form>
-    <p>Example Credentials:</p>
-    <ul>
-        <li>Username: <code>user1</code></li>
-        <li>Password: <code>password123</code></li>
-    </ul>
+    <header th:replace="~{fragments :: header(active='login')}"></header>
+    <main class="container">
+        <section class="card">
+            <h2 class="page-title">Login</h2>
+            <!-- Vulnerability: Broken Authentication - Insecure authentication mechanism without proper session handling. -->
+            <p class="callout"><strong>Note:</strong> The login process lacks secure session management and uses plaintext passwords.</p>
+            <p id="login-hint" class="callout callout-info" hidden></p>
+            <form action="#" th:action="@{/login}" method="post" class="form">
+                <label class="field">
+                    <span class="field-label">Username</span>
+                    <input type="text" id="username" name="username" value="user1" autocomplete="username" />
+                </label>
+                <label class="field">
+                    <span class="field-label">Password</span>
+                    <input type="password" name="password" value="password123" autocomplete="current-password" />
+                </label>
+                <div class="form-actions">
+                    <button type="button" class="btn">Log in</button>
+                </div>
+            </form>
+        </section>
+        <section class="card card-muted">
+            <h3>Example Credentials</h3>
+            <ul class="plain-list">
+                <li>Username: <code>user1</code></li>
+                <li>Password: <code>password123</code></li>
+            </ul>
+        </section>
+    </main>
+    <footer th:replace="~{fragments :: footer}"></footer>
+    <script th:inline="javascript">
+        var next = '[(${param.next})]';
+        if (next) {
+            var hint = document.getElementById('login-hint');
+            hint.textContent = 'Log in to continue to ' + next;
+            hint.hidden = false;
+        }
+        document.getElementById('username').focus();
+    </script>
 </body>
 </html>
