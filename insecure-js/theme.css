@@ -21,6 +21,8 @@
   --color-link: #4caf50;
   --color-focus: #1e88e5;
   --color-danger: #c62828;
+  --color-danger-hover: #b71c1c;
+  --color-on-danger: #ffffff;
   --color-warning: #ef6c00;
   --color-success: #2e7d32;
   --color-info: #1565c0;
@@ -49,6 +51,7 @@
   --border-width: 1px;
   --transition-base: 0.3s ease;
   --content-width: 800px;
+  --content-width-wide: 960px;
 }
 
 /* dark theme */
@@ -68,6 +71,8 @@
     --color-link: #81c784;
     --color-focus: #64b5f6;
     --color-danger: #ef5350;
+    --color-danger-hover: #e57373;
+    --color-on-danger: #1f0a0a;
     --color-warning: #ffa726;
     --color-success: #66bb6a;
     --color-info: #42a5f5;
