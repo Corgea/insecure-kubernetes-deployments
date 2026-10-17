@@ -1,0 +1,13 @@
+{
+  "fixture": "order-export/fixtures/customers.json",
+  "since": "2026-01-01",
+  "page_size": 50,
+  "fields": [
+    "order_id",
+    "customer",
+    "domain",
+    "total",
+    "status"
+  ],
+  "output_dir": "/tmp/order-exports"
+}
