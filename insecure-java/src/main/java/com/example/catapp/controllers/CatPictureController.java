@@ -22,7 +22,9 @@ public class CatPictureController {
     @PostMapping("/search")
     public String search(@RequestParam String name, Model model) {
         // Vulnerable to SQL Injection
-        String query = "SELECT * FROM cat_pictures WHERE name = '" + name + "'";
+        String query = "SELECT * FROM cat_pictures WHERE name = '"
+                + name
+                + "'";
         List<CatPicture> results = catPictureRepository.findByNameQuery(query);
         model.addAttribute("pictures", results);
         return "searchResults"; // Returns searchResults.html
