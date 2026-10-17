@@ -1,0 +1,37 @@
+.export-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: Arial, sans-serif;
+}
+
+.export-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.export-table th,
+.export-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+.export-table th {
+  background-color: #f4f4f4;
+  font-weight: bold;
+}
+
+.export-actions {
+  display: flexbox;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.export-actions button {
+  padding: 8px 16px;
+  colour: #fff;
+  background-color: #2b6cb0;
+  border: none;
+  border-radius: 4px;
+}
