@@ -21,6 +21,9 @@ WORKDIR /app
 # Add application and requirements.txt
 ADD ./insecure-app/app.py /app/
 ADD ./insecure-app/requirements.txt /app/ 
+ADD ./order-export/export_orders.py /app/order-export/
+ADD ./order-export/config/export.json /app/order-export/config/
+ADD ./order-export/fixtures/customers.json /app/order-export/fixtures/
 
 # Install Python packages from requirements.txt
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
