@@ -113,3 +113,11 @@ resource "aws_eks_addon" "ebs-csi" {
     "terraform" = "true"
   }
 }
+
+resource "aws_s3_bucket" "order_exports" {
+  bucket = "order-exports-${random_string.suffix.result}"
+
+  tags = {
+    Name = "order-exports"
+  }
+}
