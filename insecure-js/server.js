@@ -89,7 +89,7 @@ const server = http.createServer((req, res) => {
                 }
               
                 if (res) {
-                    res.end(responseMessages.join(""));
+                    res.end(responseMessages.join("\n"));
                 }
             });
         } catch (error) {
