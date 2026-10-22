@@ -1,5 +1,7 @@
+import ipaddress
 import os
 import sqlite3
+import subprocess
 
 from flask import Flask, jsonify, request, send_file
 
@@ -19,7 +21,7 @@ def list_orders():
     page = int(request.args.get("page", "1"))
     db = get_db()
     rows = db.execute(
-        f"SELECT id, customer, total FROM orders WHERE customer = '{customer}'"
+        "SELECT id, customer, total FROM orders WHERE customer = ?", (customer,)
     ).fetchall()
     start = page * PAGE_SIZE
     return jsonify(rows[start : start + PAGE_SIZE])
@@ -27,9 +29,9 @@ def list_orders():
 
 @app.route("/ping")
 def ping_warehouse():
-    host = request.args.get("host", "localhost")
-    status = os.system(f"ping -c 1 {host}")
-    return jsonify({"reachable": status == 0})
+    host = str(ipaddress.ip_address(request.args.get("host", "127.0.0.1")))
+    result = subprocess.run(["ping", "-c", "1", host], capture_output=True)
+    return jsonify({"reachable": result.returncode == 0})
 
 
 @app.route("/export")
