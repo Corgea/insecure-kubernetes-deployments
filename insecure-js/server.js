@@ -111,8 +111,8 @@ const server = http.createServer((req, res) => {
               try {
                 const query = `SELECT product FROM Orders WHERE orderNumber = ${postData.orderNumber};`;
                 const result = await sequelize.query(query, { type: sequelize.QueryTypes.SELECT });
-                responseMessages[index] += result.length > 0
-                  ? `<p>Order details: <pre>${JSON.stringify(result, null, 2)}</pre></p>`
+                responseMessages[index] += result.length
+                  ? `<p>Order details:</p><pre>${JSON.stringify(result, null, 2)}</pre>`
                   : `<p>No orders found for order number ${postData.orderNumber}</p>`;
               } catch (error) {
                 responseMessages[index] += `<p>Sequelize query error: ${error.message}</p>`;
@@ -130,7 +130,7 @@ const server = http.createServer((req, res) => {
               const query = `SELECT product FROM Orders WHERE orderNumber = ${postData.orderNumber2};`;
               db.all(query, [], (err, rows) => {
                 if (err) {
-                  responseMessages[index] += `<p>SQLite error: ${err.message}</p>`;
+                  responseMessages[index] += `<p>SQLite lookup failed: ${err.message}</p>`;
                 } else {
                   responseMessages[index] += rows.length > 0
                     ? `<p>Order details: <pre>${JSON.stringify(rows, null, 2)}</pre></p>`
