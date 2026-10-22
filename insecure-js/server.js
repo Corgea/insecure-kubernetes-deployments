@@ -9,6 +9,9 @@ const db = new sqlite3.Database("./data.db");
 const mysql = require('mysql2');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+const crypto = require('crypto');
+const startedAt = Date.now();
 
 // MySQL Connection Setup
 const connection = mysql.createConnection({
