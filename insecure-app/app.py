@@ -10,6 +10,9 @@ aws_access_key_id = 'AKIA2JAPX77RGLB664VE'
 aws_secret = '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'
 
 app = Flask(__name__)
+app.config['JSON_SORT_KEYS'] = False
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024
+app.config['PROPAGATE_EXCEPTIONS'] = True
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
