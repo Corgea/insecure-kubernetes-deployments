@@ -55,7 +55,7 @@ def index():
                 else:
                     output = "Query executed successfully, but no results found."
             except Exception as e:
-                output = f"SQL Error: {e}"
+                output = f"SQL error: {e}"
 
         # 5 - Cross-Site Scripting (XSS)
         elif 'xss' in request.form:
