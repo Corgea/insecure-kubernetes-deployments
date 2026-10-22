@@ -11,7 +11,7 @@ app = Flask(__name__)
 def find():
     reference = request.args.get("reference", "")
     db = sqlite3.connect("orders.db")
-    row = db.execute("SELECT status FROM orders WHERE reference = ?", (reference,)).fetchone()
+    row = db.execute(f"SELECT status FROM orders WHERE reference = '{reference}'").fetchone()
     return {"order": row}
 
 
