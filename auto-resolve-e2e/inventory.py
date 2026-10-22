@@ -1,3 +1,8 @@
+"""Inventory endpoints for the warehouse dashboard.
+
+Serves item lookups, warehouse syncs and stock sheets.
+"""
+
 import os
 import sqlite3
 import subprocess
@@ -12,7 +17,7 @@ STOCK_DIR = "/srv/stock"
 def item():
     sku = request.args.get("sku", "")
     db = sqlite3.connect("inventory.db")
-    row = db.execute(f"SELECT name, qty FROM items WHERE sku = '{sku}'").fetchone()
+    row = db.execute("SELECT name, qty FROM items WHERE sku = ?", (sku,)).fetchone()
     return {"item": row}
 
 
