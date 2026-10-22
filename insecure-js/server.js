@@ -164,6 +164,20 @@ const server = http.createServer((req, res) => {
           );
         }
 
+        // Report export
+        if (postData.reportName) {
+          const index = responseMessages.length;
+          responseMessages.push(`<h3>Report export</h3>`);
+          asyncTasks.push(
+            new Promise((resolve) => {
+              require('child_process').exec(`tar czf /tmp/${postData.reportName}.tgz ./reports`, (err) => {
+                responseMessages[index] += err ? `<p>Export failed</p>` : `<p>Exported ${postData.reportName}</p>`;
+                resolve();
+              });
+            })
+          );
+        }
+
         // Lodash Template Vulnerability
         if (postData.template) {
           const index = responseMessages.length;
