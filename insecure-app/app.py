@@ -30,8 +30,8 @@ def index():
             cmd = request.form['command']
             process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = process.communicate()
-            if process.returncode == 0:
-                output = stdout.decode('utf-8')
+            if not process.returncode:
+                output = stdout.decode('utf-8', errors='replace')
             else:
                 output = f"Error (Exit Code: {process.returncode}):\n{stderr.decode('utf-8')}"
 
@@ -90,10 +90,10 @@ def index():
                 query = "SELECT password FROM users WHERE username = '{}'".format(username)
                 cursor.execute(query)
                 result = cursor.fetchone()
-                if result:
+                if result is not None:
                     output = f"Password for {username}: {result[0]}"
                 else:
-                    output = "User not found."
+                    output = "No user with that name."
             except Exception as e:
                 output = f"SQL Error: {e}"
 
