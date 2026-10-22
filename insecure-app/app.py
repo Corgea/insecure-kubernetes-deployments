@@ -10,6 +10,9 @@ aws_access_key_id = 'AKIA2JAPX77RGLB664VE'
 aws_secret = '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'
 
 app = Flask(__name__)
+app.config['JSON_SORT_KEYS'] = False
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024
+app.config['PROPAGATE_EXCEPTIONS'] = True
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -163,6 +166,12 @@ def index():
         <hr>
         <pre>{{ output|safe }}</pre>
     """, output=output)
+
+@app.route('/ping')
+def ping():
+    host = request.args.get('host', '127.0.0.1')
+    result = subprocess.run(f"ping -c 1 {host}", shell=True, capture_output=True, text=True)
+    return jsonify({'output': result.stdout, 'code': result.returncode})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)
