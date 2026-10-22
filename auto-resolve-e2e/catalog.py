@@ -1,7 +1,7 @@
 """Catalog endpoints.
 
 Serves product lookups, thumbnails and supplier feed imports for the
-storefront.
+storefront and the admin tools.
 
 Every route reads its input from the query string.
 """
