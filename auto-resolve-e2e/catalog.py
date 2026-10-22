@@ -1,3 +1,11 @@
+"""Catalog endpoints.
+
+Serves product lookups, thumbnails and supplier feed imports for the
+storefront.
+
+Every route reads its input from the query string.
+"""
+
 import sqlite3
 import subprocess
 
@@ -11,7 +19,7 @@ app = Flask(__name__)
 def product():
     slug = request.args.get("slug", "")
     db = sqlite3.connect("catalog.db")
-    row = db.execute(f"SELECT title, price FROM products WHERE slug = '{slug}'").fetchone()
+    row = db.execute("SELECT title, price FROM products WHERE slug = ?", (slug,)).fetchone()
     return {"product": row}
 
 
