@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Download a transfer</title>
+  </head>
+  <body>
+    <section id="email-step">
+      <label>Email <input id="email" type="email" /></label>
+      <button id="continue" type="button">Continue</button>
+    </section>
+    <!-- Shown after the email step. The new-code link only exists on this step. -->
+    <section id="code-step" hidden>
+      <label>Code <input id="code" /></label>
+      <button id="download" type="button">Download</button>
+      <a id="new-code" href="#">Send me a new code</a>
+    </section>
+    <p id="message" role="status"></p>
+  </body>
+</html>
