@@ -1,4 +1,4 @@
-"""How long finished transfers are kept."""
+"""How long finished transfers are kept, by file category."""
 
 from __future__ import annotations
 
