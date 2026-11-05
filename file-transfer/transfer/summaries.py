@@ -6,7 +6,7 @@ import os
 from typing import Callable
 
 DEFAULT_SUMMARY_MODEL = "bedrock:gpt-6-luna-low"
-MAX_EVENTS_IN_PROMPT = 50
+MAX_EVENTS_IN_PROMPT = 50  # Long enough for any transfer we have seen.
 
 
 def summary_model() -> str:
