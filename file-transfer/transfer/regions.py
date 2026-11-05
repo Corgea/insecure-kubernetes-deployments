@@ -9,7 +9,7 @@ DEFAULT_REGION = "us-east-1"
 
 
 class UnknownRegion(ValueError):
-    """A client named a storage region the service does not have."""
+    """A client named a storage region this service does not have."""
 
 
 def resolve_region(requested: Optional[str]) -> str:
