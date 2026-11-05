@@ -36,3 +36,12 @@ async function refresh() {
 
 document.querySelector("#refresh").addEventListener("click", refresh);
 refresh();
+
+// Shown under the table.
+export function countLabel(transfers) {
+  return `${transfers.length} transfers`;
+}
+
+export function newest(transfers, limit = 10) {
+  return [...transfers].sort((a, b) => b.created_at - a.created_at).slice(0, limit);
+}
