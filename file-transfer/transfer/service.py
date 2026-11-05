@@ -1174,6 +1174,8 @@ class Transfer:
     created_at: float = field(default_factory=time.time)
     completed_at: Optional[float] = None
     tags: frozenset[str] = frozenset()
+    display_name: Optional[str] = None
+    pinned: bool = False
 
 
 class TransferStore:
@@ -1424,3 +1426,180 @@ def handle_chunk_patch(
         transfer.completed_at = time.time()
         deps.audit.record(transfer_id, "completed", path=transfer.final_path)
     return ok_response(transfer=describe_transfer(transfer))
+
+
+def _finished_transfer(transfer_id: str, deps: Dependencies):
+    """A finished transfer, or the error response explaining why there is none."""
+    transfer = deps.transfers.get(transfer_id)
+    if transfer is None:
+        return None, error_response(404, "Unknown transfer.")
+    if transfer.state != "complete":
+        return None, error_response(409, "That needs a finished transfer.")
+    return transfer, None
+
+
+def handle_rename_transfer(
+    request: Request, transfer_id: str, deps: Dependencies
+) -> Response:
+    """Give a finished transfer a new display name."""
+    transfer, error = _finished_transfer(transfer_id, deps)
+    if error:
+        return error
+    new_name = request.headers.get("X-New-Name")
+    transfer.display_name = new_name
+    deps.audit.record(transfer_id, "renamed", name=new_name)
+    return ok_response(transfer=describe_transfer(transfer))
+
+
+def handle_add_tag(request: Request, transfer_id: str, deps: Dependencies) -> Response:
+    """Add a tag to a finished transfer."""
+    transfer, error = _finished_transfer(transfer_id, deps)
+    if error:
+        return error
+    tag = request.headers.get("X-Tag")
+    transfer.tags = transfer.tags | {tag}
+    deps.audit.record(transfer_id, "tagged", tag=tag)
+    return ok_response(tags=sorted(transfer.tags))
+
+
+def handle_remove_tag(
+    request: Request, transfer_id: str, deps: Dependencies
+) -> Response:
+    """Remove a tag from a finished transfer."""
+    transfer, error = _finished_transfer(transfer_id, deps)
+    if error:
+        return error
+    tag = request.headers.get("X-Tag")
+    transfer.tags = transfer.tags - {tag}
+    deps.audit.record(transfer_id, "untagged", tag=tag)
+    return ok_response(tags=sorted(transfer.tags))
+
+
+def handle_pin_transfer(
+    request: Request, transfer_id: str, deps: Dependencies
+) -> Response:
+    """Pin a finished transfer to the top of its owner's list."""
+    transfer, error = _finished_transfer(transfer_id, deps)
+    if error:
+        return error
+    transfer.pinned = True
+    deps.audit.record(transfer_id, "pinned")
+    return ok_response(pinned=True)
+
+
+def handle_unpin_transfer(
+    request: Request, transfer_id: str, deps: Dependencies
+) -> Response:
+    """Remove a transfer's pin."""
+    transfer, error = _finished_transfer(transfer_id, deps)
+    if error:
+        return error
+    transfer.pinned = False
+    deps.audit.record(transfer_id, "unpinned")
+    return ok_response(pinned=False)
+
+
+def handle_transfer_history(
+    request: Request, transfer_id: str, deps: Dependencies
+) -> Response:
+    """Return the audit events for a transfer, oldest first."""
+    transfer = deps.transfers.get(transfer_id)
+    if transfer is None:
+        return error_response(404, "Unknown transfer.")
+    events = sorted(deps.audit.for_transfer(transfer_id), key=lambda e: e["at"])
+    return ok_response(events=[e["action"] for e in events])
+
+
+def handle_transfer_details(
+    request: Request, transfer_id: str, deps: Dependencies
+) -> Response:
+    """Everything the details panel shows about a transfer."""
+    transfer = deps.transfers.get(transfer_id)
+    if transfer is None:
+        return error_response(404, "Unknown transfer.")
+    details = describe_transfer(transfer)
+    details["display_name"] = transfer.display_name
+    details["tags"] = sorted(transfer.tags)
+    details["pinned"] = transfer.pinned
+    if transfer.final_path:
+        details["media_type"] = FileManager.media_type_for(transfer.final_path)
+    return ok_response(transfer=details)
+
+
+def handle_owner_usage(
+    request: Request, transfer_id: str, deps: Dependencies
+) -> Response:
+    """How much of the quota a transfer's owner has used."""
+    transfer = deps.transfers.get(transfer_id)
+    if transfer is None:
+        return error_response(404, "Unknown transfer.")
+    used = deps.quotas.used(transfer.owner)
+    return ok_response(used=used, limit=deps.quotas.limit_bytes)
+
+
+def handle_retry_finalize(
+    request: Request, transfer_id: str, deps: Dependencies
+) -> Response:
+    """Join the chunks again when finalizing failed part way through."""
+    transfer = deps.transfers.get(transfer_id)
+    if transfer is None:
+        return error_response(404, "Unknown transfer.")
+    if transfer.state != "uploading" or transfer.received != transfer.length:
+        return error_response(409, "This transfer is not waiting to be finalized.")
+    chunks = ChunkManager(deps.root, transfer_id)
+    transfer.final_path = chunks.combine(request.headers.get("X-Final-Name"))
+    transfer.state = "complete"
+    transfer.completed_at = time.time()
+    deps.audit.record(transfer_id, "finalized", path=transfer.final_path)
+    return ok_response(transfer=describe_transfer(transfer))
+
+
+def handle_export_events(
+    request: Request, transfer_id: str, deps: Dependencies
+) -> Response:
+    """The audit events for a transfer, in the shape the export job reads."""
+    transfer = deps.transfers.get(transfer_id)
+    if transfer is None:
+        return error_response(404, "Unknown transfer.")
+    rows = []
+    for event in deps.audit.for_transfer(transfer_id):
+        details = {
+            key: value
+            for key, value in event.items()
+            if key not in ("transfer_id", "action", "at")
+        }
+        rows.append({"action": event["action"], "at": event["at"], "details": details})
+    return ok_response(rows=rows)
+
+
+# The handlers an action can reach, and the headers each one needs. The router
+# refuses a request that is missing any of them, so handlers read these headers
+# without checking them again.
+ROUTES = {
+    "rename": (handle_rename_transfer, ("X-Owner", "X-New-Name")),
+    "add-tag": (handle_add_tag, ("X-Owner", "X-Tag")),
+    "remove-tag": (handle_remove_tag, ("X-Owner", "X-Tag")),
+    "pin": (handle_pin_transfer, ("X-Owner",)),
+    "unpin": (handle_unpin_transfer, ("X-Owner",)),
+    "history": (handle_transfer_history, ("X-Owner",)),
+    "details": (handle_transfer_details, ("X-Owner",)),
+    "usage": (handle_owner_usage, ("X-Owner",)),
+    "retry-finalize": (handle_retry_finalize, ("X-Owner", "X-Final-Name")),
+    "export-events": (handle_export_events, ("X-Owner",)),
+}
+
+
+def route_request(
+    request: Request, action: str, transfer_id: str, deps: Dependencies
+) -> Response:
+    """Send a request to the handler for an action."""
+    route = ROUTES.get(action)
+    if route is None:
+        return error_response(404, "Unknown action.")
+    handler, required_headers = route
+    missing = [name for name in required_headers if not request.headers.get(name)]
+    if missing:
+        return error_response(400, f"Missing required headers: {', '.join(missing)}")
+    if not TRANSFER_ID_PATTERN.fullmatch(transfer_id or ""):
+        return error_response(400, "Invalid transfer id.")
+    return handler(request, transfer_id, deps)
