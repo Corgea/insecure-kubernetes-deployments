@@ -52,7 +52,7 @@ class SweepReport:
 
 
 def human_bytes(size: int) -> str:
-    """A byte count for people to read."""
+    """A byte count in the largest unit that fits."""
     value = float(size)
     for unit in ("B", "KB", "MB", "GB"):
         if value < 1024:
