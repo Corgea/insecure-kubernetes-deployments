@@ -12,6 +12,8 @@ from transfer.service import (
 
 
 class UploadNameErrorTests(unittest.TestCase):
+    """Names are checked before a request writes anything."""
+
     def test_accepted_name(self):
         self.assertIsNone(FileManager.upload_name_error("report.pdf"))
 
