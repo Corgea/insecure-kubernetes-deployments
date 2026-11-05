@@ -29,7 +29,7 @@ def highlight_line(
 def preview_rows(
     findings: list[DlpFinding], changed_lines: dict[str, set[int]]
 ) -> list[dict]:
-    """The rows the upload preview shows, one per highlighted finding."""
+    """The rows the upload preview shows, one per finding it highlights."""
     rows = []
     for finding in findings:
         line = highlight_line(finding, changed_lines)
