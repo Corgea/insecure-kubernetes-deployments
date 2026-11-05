@@ -1082,7 +1082,7 @@ class FileManager:
         return os.path.basename(file_name) == file_name and "\\" not in file_name
 
     @staticmethod
-    def upload_name_error(file_name: str) -> Optional[str]:
+    def upload_name_error(file_name: Optional[str]) -> Optional[str]:
         """Client-facing reason an upload name is rejected; None when it is fine."""
         if not FileManager.validate_file_extension(file_name):
             return "This file type is not accepted."
