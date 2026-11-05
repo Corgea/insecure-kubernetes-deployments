@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Transfers</title>
+    <link rel="stylesheet" href="status.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <img src="logo.svg" />
+      <h1>Your transfers</h1>
+      <button class="btn-secondary" type="button" id="refresh">Refresh</button>
+    </header>
+    <main>
+      <table id="transfers">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>State</th>
+            <th>Size</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p class="hint">Finished transfers are removed after 30 days.</p>
+    </main>
+    <script type="module" src="status.js"></script>
+  </body>
+</html>
