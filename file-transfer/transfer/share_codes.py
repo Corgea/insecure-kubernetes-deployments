@@ -13,7 +13,7 @@ GROUP_SIZE = 4
 
 
 def new_code() -> str:
-    """A fresh share code."""
+    """A new random share code."""
     return secrets.token_hex(CODE_BYTES)
 
 
