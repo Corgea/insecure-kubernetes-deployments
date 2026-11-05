@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from .http import Request, Response, UploadedFile
+from .regions import UnknownRegion, resolve_region
 
 logger = logging.getLogger(__name__)
 
@@ -1174,6 +1175,7 @@ class Transfer:
     created_at: float = field(default_factory=time.time)
     completed_at: Optional[float] = None
     tags: frozenset[str] = frozenset()
+    region: Optional[str] = None
 
 
 class TransferStore:
@@ -1287,7 +1289,12 @@ def handle_create_transfer(request: Request, deps: Dependencies) -> Response:
         return error_response(400, "Upload-Length must be an integer.")
     if length <= 0:
         return error_response(400, "Upload-Length must be positive.")
+    try:
+        region = resolve_region(request.headers.get("Upload-Region"))
+    except UnknownRegion:
+        return error_response(400, "Unknown storage region.")
     transfer = deps.transfers.create(owner, length)
+    transfer.region = region
     deps.audit.record(transfer.id, "created", owner=owner, length=length)
     return ok_response(transfer=describe_transfer(transfer))
 
