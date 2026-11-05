@@ -1,4 +1,4 @@
-"""Short written summaries of a transfer's history."""
+"""One-sentence written summaries of a transfer's history."""
 
 from __future__ import annotations
 
