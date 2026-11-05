@@ -56,13 +56,10 @@ def deliver_event(
     )
 
 
-def publish_transfer_completed(transfer, endpoints: dict, replay_queue: list) -> bool:
+def publish_transfer_completed(transfer, endpoints: dict) -> bool:
     """Tell an owner's endpoint that a transfer finished."""
     endpoint = endpoints.get(transfer.owner)
     if endpoint is None:
         return False
     event = {"type": "transfer.completed", "transfer_id": transfer.id}
-    result = deliver_event(endpoint, event)
-    if not result.delivered:
-        replay_queue.append(event)
-    return result.delivered
+    return deliver_event(endpoint, event).delivered

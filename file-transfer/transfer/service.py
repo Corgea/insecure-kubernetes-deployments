@@ -13,8 +13,6 @@ WSGI or ASGI adapter.
 
 from __future__ import annotations
 
-import hashlib
-import hmac
 import logging
 import os
 import re
@@ -35,8 +33,6 @@ DEFAULT_QUOTA_BYTES = 50 * 1024 * 1024 * 1024
 TRANSFER_ID_PATTERN = re.compile(r"[0-9a-f]{32}")
 REQUIRED_CHUNK_HEADERS = ("Upload-Offset", "Upload-Length", "Upload-Name")
 TERMINAL_STATES = frozenset({"complete", "cancelled", "expired"})
-UPLOAD_EXPIRY_SECONDS = 7 * 24 * 60 * 60
-CHUNK_CONTENT_TYPE = "application/offset+octet-stream"
 
 
 @dataclass(frozen=True)
@@ -1386,14 +1382,6 @@ def handle_chunk_patch(
         )
     if request.headers.get("X-Owner") != transfer.owner:
         return error_response(403, "This transfer belongs to another owner.")
-    if time.time() - transfer.created_at > UPLOAD_EXPIRY_SECONDS:
-        transfer.state = "expired"
-        deps.audit.record(transfer_id, "expired")
-        return error_response(410, "This upload has expired.")
-
-    content_type = request.headers.get("Content-Type", CHUNK_CONTENT_TYPE)
-    if content_type != CHUNK_CONTENT_TYPE:
-        return error_response(415, f"Chunks must be sent as {CHUNK_CONTENT_TYPE}.")
 
     chunk = request.body
     if not chunk:
@@ -1402,13 +1390,6 @@ def handle_chunk_patch(
         return error_response(413, "Chunk is larger than the chunk limit.")
     if offset + len(chunk) > length:
         return error_response(400, "Chunk runs past Upload-Length.")
-
-    expected_digest = request.headers.get("Upload-Checksum")
-    if expected_digest:
-        actual_digest = hashlib.sha256(chunk).hexdigest()
-        if not hmac.compare_digest(actual_digest, expected_digest.lower()):
-            deps.audit.record(transfer_id, "checksum_mismatch", offset=offset)
-            return error_response(422, "Chunk failed its checksum.")
 
     if not deps.quotas.reserve(transfer.owner, len(chunk)):
         return error_response(507, "Storage quota exceeded.")
