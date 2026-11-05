@@ -1,4 +1,4 @@
-"""One-time share codes for completed transfers."""
+"""One-time share codes for finished transfers."""
 
 from __future__ import annotations
 
