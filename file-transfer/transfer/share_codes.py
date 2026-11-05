@@ -8,7 +8,7 @@ import secrets
 import threading
 
 HEX_DIGITS = frozenset("0123456789abcdef")
-CODE_BYTES = 8
+CODE_BYTES = 8  # Eight bytes print as sixteen hex digits.
 GROUP_SIZE = 4
 
 
