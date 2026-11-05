@@ -1,0 +1,3 @@
+authlib==1.8.0
+apprise==1.10.0
+wlc==2.0.0
