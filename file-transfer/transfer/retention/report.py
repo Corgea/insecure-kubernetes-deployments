@@ -1,4 +1,4 @@
-"""What one retention sweep did."""
+"""A record of what one retention sweep did."""
 
 from __future__ import annotations
 
