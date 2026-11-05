@@ -1082,6 +1082,15 @@ class FileManager:
         return os.path.basename(file_name) == file_name and "\\" not in file_name
 
     @staticmethod
+    def upload_name_error(file_name: Optional[str]) -> Optional[str]:
+        """Client-facing reason an upload name is rejected; None when it is fine."""
+        if not FileManager.validate_file_extension(file_name):
+            return "This file type is not accepted."
+        if not FileManager.is_safe_file_name(file_name):
+            return "Send the file name only, without a folder path."
+        return None
+
+    @staticmethod
     def max_bytes_for(file_name: str) -> int:
         """The largest upload allowed for this file name."""
         _, extension = os.path.splitext(file_name)
@@ -1332,6 +1341,9 @@ def handle_multipart_upload(request: Request, deps: Dependencies) -> Response:
     uploaded = request.files.get("file")
     if uploaded is None:
         return error_response(400, "A file part is required.")
+    name_error = FileManager.upload_name_error(uploaded.name)
+    if name_error:
+        return error_response(400, name_error)
     size = len(uploaded.content)
     if size > MAX_SINGLE_REQUEST_BYTES:
         return error_response(413, "Use a resumable upload for files this large.")
@@ -1409,6 +1421,10 @@ def handle_chunk_patch(
         if not hmac.compare_digest(actual_digest, expected_digest.lower()):
             deps.audit.record(transfer_id, "checksum_mismatch", offset=offset)
             return error_response(422, "Chunk failed its checksum.")
+
+    name_error = FileManager.upload_name_error(request.headers.get("Upload-Name"))
+    if name_error:
+        return error_response(400, name_error)
 
     if not deps.quotas.reserve(transfer.owner, len(chunk)):
         return error_response(507, "Storage quota exceeded.")
