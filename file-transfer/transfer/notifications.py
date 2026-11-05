@@ -16,13 +16,10 @@ class Owner:
     contact_email: Optional[str] = None
 
 
-def recipient_for(owner: Owner) -> str:
-    """The address to notify, falling back to the account email."""
-    return owner.contact_email or owner.account_email
-
-
 def notify_owner(owner: Owner, subject: str, send: Callable[[str, str], None]) -> bool:
     """Email an owner about one of their transfers."""
-    send(recipient_for(owner), subject)
+    if not owner.contact_email:
+        return False
+    send(owner.contact_email, subject)
     logger.info("Notified owner %s: %s", owner.id, subject)
     return True
