@@ -3,7 +3,7 @@ import unittest
 from tests.browser.fake_page import FakePage
 from tests.browser.pages import DownloadPage
 
-UNKNOWN_EMAIL = "nobody@example.test"
+UNKNOWN_EMAIL = "nobody@example.test"  # Never has a transfer.
 GENERIC_MESSAGE = "If that address has a transfer, we sent a new code."
 
 
