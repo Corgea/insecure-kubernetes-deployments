@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from .spans import reported_end_line
+from .spans import item_span, reported_end_line
 
 SEVERITIES = {"error": "high", "warning": "medium", "note": "low"}
 UNKNOWN_RULE = "unknown"
@@ -51,6 +51,14 @@ def ingest_item(item: dict) -> ScanFinding:
     )
 
 
-def ingest_report(report: dict) -> list[ScanFinding]:
-    """Store every item in a scanner report."""
-    return [ingest_item(item) for item in report.get("results", [])]
+def ingest_report(
+    report: dict, changed_lines: dict[str, set[int]]
+) -> list[ScanFinding]:
+    """Store the items in a scanner report whose span touches a changed line."""
+    kept = []
+    for item in report.get("results", []):
+        first, last = item_span(item["start"]["line"], item)
+        changed = changed_lines.get(item["path"], set())
+        if any(first <= line <= last for line in changed):
+            kept.append(ingest_item(item))
+    return kept
