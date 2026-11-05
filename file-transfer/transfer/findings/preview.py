@@ -1,4 +1,4 @@
-"""Pick the line a scanner finding is highlighted on in an archive preview."""
+"""Pick the line a scanner finding is highlighted on in a preview."""
 
 from __future__ import annotations
 
