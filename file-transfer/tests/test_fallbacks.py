@@ -1,7 +1,7 @@
 import unittest
 import urllib.error
 
-from transfer.notifications import Owner, notify_owner, recipient_for
+from transfer.notifications import Owner, notify_owner
 from transfer.regions import DEFAULT_REGION, resolve_region
 from transfer.webhooks import deliver_event
 
@@ -37,9 +37,11 @@ class RegionTests(unittest.TestCase):
 
 
 class NotificationTests(unittest.TestCase):
-    def test_account_email_is_the_fallback(self):
+    def test_no_contact_address_sends_nothing(self):
+        sent = []
         owner = Owner("o1", "account@example.test")
-        self.assertEqual(recipient_for(owner), "account@example.test")
+        self.assertFalse(notify_owner(owner, "Done", lambda to, subject: sent.append(to)))
+        self.assertEqual(sent, [])
 
     def test_contact_email_wins(self):
         sent = []
