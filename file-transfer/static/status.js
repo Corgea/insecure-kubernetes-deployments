@@ -1,4 +1,4 @@
-// Renders the caller's transfers on the status page.
+// Renders the signed-in owner's transfers on the status page.
 
 const STATE_LABELS = {
   uploading: "Uploading",
