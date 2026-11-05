@@ -8,6 +8,8 @@ GENERIC_MESSAGE = "If that address has a transfer, we sent a new code."
 
 
 class NewCodeTests(unittest.TestCase):
+    """Asking for a new code never reveals whether an address is known."""
+
     def setUp(self):
         self.page = FakePage()
         self.download = DownloadPage(self.page)
