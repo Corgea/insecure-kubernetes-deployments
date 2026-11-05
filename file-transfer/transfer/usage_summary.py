@@ -8,7 +8,7 @@ from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
-MEGABYTE = 1024 * 1024
+MEGABYTE = 1024 * 1024  # Binary megabytes, as the quota page shows them.
 
 
 def month_start(now=None):
