@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Transfers</title>
+  </head>
+  <body>
+    <h1>Transfers</h1>
+    <div id="bulk-bar" hidden>
+      <span id="bulk-count"></span>
+      <button type="button" data-status="archived">Archive</button>
+      <button type="button" data-status="pinned">Pin</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Name</th>
+          <th>State</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <dialog id="timeline-modal">
+      <h2>History</h2>
+      <ol id="timeline"></ol>
+      <button type="button" id="timeline-close">Close</button>
+    </dialog>
+    <div id="toast" role="status"></div>
+    <script>
+      const selected = new Set();
+      let lastStatus = null;
+
+      function showToast(text) {
+        const toast = document.getElementById("toast");
+        toast.textContent = text;
+        setTimeout(() => {
+          toast.textContent = "";
+        }, 4000);
+      }
+
+      function updateBar() {
+        document.getElementById("bulk-bar").hidden = selected.size === 0;
+        document.getElementById("bulk-count").textContent = `${selected.size} selected`;
+      }
+
+      function track(name, properties) {
+        navigator.sendBeacon("/analytics", JSON.stringify({ name, ...properties }));
+      }
+
+      async function applyBulk(status) {
+        lastStatus = status;
+        const response = await fetch("/transfers/bulk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: [...selected], status }),
+        });
+        const data = await response.json();
+        showToast(`${data.results.length} updated`);
+        track("bulk_status", { count: data.results.length });
+        selected.clear();
+        updateBar();
+        await loadRows();
+      }
+
+      async function openTimeline(id) {
+        const response = await fetch(`/transfers/${id}/history`);
+        const { events } = await response.json();
+        const list = document.getElementById("timeline");
+        list.replaceChildren(
+          ...events.map((event) => {
+            const item = document.createElement("li");
+            item.textContent = event;
+            return item;
+          }),
+        );
+        document.getElementById("timeline-modal").showModal();
+      }
+
+      function renderRow(transfer) {
+        const row = document.createElement("tr");
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.addEventListener("change", () => {
+          if (box.checked) {
+            selected.add(transfer.id);
+          } else {
+            selected.delete(transfer.id);
+          }
+          updateBar();
+        });
+        const pick = document.createElement("td");
+        pick.append(box);
+        const name = document.createElement("td");
+        name.textContent = transfer.display_name || transfer.id;
+        const state = document.createElement("td");
+        state.textContent = transfer.state;
+        const history = document.createElement("button");
+        history.type = "button";
+        history.textContent = "History";
+        history.addEventListener("click", () => openTimeline(transfer.id));
+        const action = document.createElement("td");
+        action.append(history);
+        row.append(pick, name, state, action);
+        return row;
+      }
+
+      async function loadRows() {
+        const response = await fetch("/transfers");
+        const { transfers } = await response.json();
+        document.getElementById("rows").replaceChildren(...transfers.map(renderRow));
+      }
+
+      document.querySelectorAll("#bulk-bar button").forEach((button) => {
+        button.addEventListener("click", () => applyBulk(button.dataset.status));
+      });
+      document.getElementById("timeline-close").addEventListener("click", () => {
+        document.getElementById("timeline-modal").close();
+      });
+      loadRows();
+    </script>
+  </body>
+</html>
