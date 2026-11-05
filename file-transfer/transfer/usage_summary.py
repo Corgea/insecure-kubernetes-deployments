@@ -1,4 +1,4 @@
-"""Monthly storage usage summary for owners."""
+"""A monthly summary of storage use for owners."""
 
 from __future__ import annotations
 
