@@ -21,6 +21,7 @@ import re
 import shutil
 import threading
 import time
+import unicodedata
 import uuid
 from dataclasses import dataclass, field
 from typing import Optional
@@ -33,6 +34,7 @@ MAX_CHUNK_BYTES = 16 * 1024 * 1024
 MAX_SINGLE_REQUEST_BYTES = 64 * 1024 * 1024
 DEFAULT_QUOTA_BYTES = 50 * 1024 * 1024 * 1024
 TRANSFER_ID_PATTERN = re.compile(r"[0-9a-f]{32}")
+MAX_DISPLAY_NAME_LENGTH = 120  # The widest name the details panel can show.
 REQUIRED_CHUNK_HEADERS = ("Upload-Offset", "Upload-Length", "Upload-Name")
 TERMINAL_STATES = frozenset({"complete", "cancelled", "expired"})
 UPLOAD_EXPIRY_SECONDS = 7 * 24 * 60 * 60
@@ -1445,7 +1447,9 @@ def handle_rename_transfer(
     transfer, error = _finished_transfer(transfer_id, deps)
     if error:
         return error
-    new_name = request.headers.get("X-New-Name")
+    new_name = unicodedata.normalize("NFC", request.headers.get("X-New-Name")).strip()
+    if len(new_name) > MAX_DISPLAY_NAME_LENGTH:
+        return error_response(400, "That name is too long.")
     transfer.display_name = new_name
     deps.audit.record(transfer_id, "renamed", name=new_name)
     return ok_response(transfer=describe_transfer(transfer))
